@@ -51,3 +51,14 @@ logs/
 # Temporary files
 *.tmp
 *.temp
+
+# Design system files (should be external dependency)
+Nodus design theme/
+static/css/nodus-matte.css
+
+# Planning documents (internal use only)
+Plan.md
+financial-freedom-platform.plan.md
+
+# Docker volumes and data
+db_data/
