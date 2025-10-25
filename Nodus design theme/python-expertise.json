@@ -1,0 +1,92 @@
+{
+  "python_expertise": {
+    "web_frameworks": {
+      "flask": {
+        "expertise_level": "advanced",
+        "use_cases": ["APIs", "dashboards", "microservices"],
+        "common_patterns": ["blueprints", "decorators", "context processors"],
+        "extensions": ["Flask-SQLAlchemy", "Flask-Login", "Flask-CORS", "Flask-Mail"],
+        "project_structure": ["app.py", "routes/", "models/", "templates/", "static/"]
+      },
+      "fastapi": {
+        "expertise_level": "intermediate",
+        "use_cases": ["REST APIs", "async operations", "data validation"],
+        "features": ["automatic docs", "type hints", "dependency injection"],
+        "common_imports": ["from fastapi import FastAPI", "from pydantic import BaseModel"]
+      }
+    },
+    "data_processing": {
+      "pandas": {
+        "expertise_level": "advanced",
+        "use_cases": ["data analysis", "CSV processing", "data transformation"],
+        "common_operations": ["DataFrame manipulation", "groupby", "merge", "pivot"],
+        "performance_tips": ["vectorization", "chunk processing", "memory optimization"]
+      },
+      "requests": {
+        "expertise_level": "advanced",
+        "use_cases": ["API calls", "web scraping", "data fetching"],
+        "patterns": ["session reuse", "error handling", "retry logic"],
+        "auth_methods": ["Bearer tokens", "Basic auth", "OAuth"]
+      },
+      "beautifulsoup4": {
+        "expertise_level": "intermediate",
+        "use_cases": ["HTML parsing", "web scraping", "content extraction"],
+        "selectors": ["CSS selectors", "find methods", "navigation"]
+      }
+    },
+    "database": {
+      "sqlalchemy": {
+        "expertise_level": "advanced",
+        "use_cases": ["ORM", "database abstraction", "migrations"],
+        "patterns": ["declarative base", "relationships", "query optimization"],
+        "databases": ["PostgreSQL", "SQLite", "MySQL"]
+      },
+      "psycopg2": {
+        "expertise_level": "intermediate",
+        "use_cases": ["PostgreSQL direct connection", "raw SQL", "performance"],
+        "connection_patterns": ["connection pooling", "context managers"]
+      }
+    },
+    "async_programming": {
+      "asyncio": {
+        "expertise_level": "intermediate",
+        "use_cases": ["concurrent operations", "I/O bound tasks", "async APIs"],
+        "patterns": ["async/await", "event loops", "coroutines"]
+      },
+      "aiohttp": {
+        "expertise_level": "beginner",
+        "use_cases": ["async HTTP requests", "concurrent API calls"],
+        "performance": ["better than requests for many concurrent calls"]
+      }
+    },
+    "automation": {
+      "schedule": {
+        "expertise_level": "intermediate",
+        "use_cases": ["task scheduling", "periodic jobs", "automation"],
+        "patterns": ["job decorators", "time-based triggers"]
+      },
+      "selenium": {
+        "expertise_level": "intermediate",
+        "use_cases": ["browser automation", "testing", "dynamic content scraping"],
+        "drivers": ["Chrome", "Firefox", "headless mode"]
+      }
+    },
+    "utilities": {
+      "python-dotenv": {
+        "expertise_level": "advanced",
+        "use_cases": ["environment variables", "configuration", "secrets"],
+        "patterns": ["load_dotenv()", ".env files", "os.getenv()"]
+      },
+      "pydantic": {
+        "expertise_level": "intermediate",
+        "use_cases": ["data validation", "settings management", "API schemas"],
+        "features": ["type validation", "automatic docs", "JSON schema"]
+      },
+      "click": {
+        "expertise_level": "intermediate",
+        "use_cases": ["CLI applications", "command-line tools", "parameter handling"],
+        "patterns": ["decorators", "commands", "options"]
+      }
+    }
+  }
+}

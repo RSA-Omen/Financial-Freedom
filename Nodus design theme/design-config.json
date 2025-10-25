@@ -1,0 +1,187 @@
+{
+  "nodus_design_system": {
+    "version": "1.1.0",
+    "last_updated": "2025-10-19",
+    "description": "Centralized design system configuration for AI-assisted project creation"
+  },
+  
+  "current_theme": {
+    "active_css": "css-themes/nodus-matte.css",
+    "theme_name": "Professional Matte",
+    "recommended": true,
+    "description": "Professional matte carbon fiber with subtle mint accents",
+    "vibe": "Clean, distraction-free, professional business interface",
+    "primary_color": "#00d4aa",
+    "background_colors": ["#0a0a0a", "#171717", "#262626"],
+    "use_cases": ["business dashboards", "admin panels", "professional interfaces"],
+    "effects": "minimal hover states, no glow effects"
+  },
+  
+  "design_philosophy": {
+    "core_principles": [
+      "Matte over glossy surfaces",
+      "Function over form", 
+      "Subtle accents for important actions only",
+      "Clean typography hierarchy",
+      "Consistent spacing patterns",
+      "Professional appearance",
+      "Reduced visual fatigue"
+    ],
+    "color_strategy": "Sophisticated carbon grays with strategic mint green accents",
+    "typography": "Inter font family for clean, readable text hierarchy",
+    "visual_effects": "Avoid flashy animations or distracting glow effects",
+    "user_experience": "Prioritize readability and professional appearance over visual spectacle"
+  },
+  
+  "ai_prompt_context": {
+    "design_vibe": "Professional matte aesthetic inspired by carbon fiber materials. Color Palette: Sophisticated carbon grays (#0a0a0a to #525252) with strategic mint green accents (#00d4aa). Typography: Inter font family for clean, readable text hierarchy. Components: Minimal, functional design with subtle hover states and professional appearance. Visual Effects: Avoid flashy animations or distracting glow effects. Focus on clean lines, proper contrast, and purposeful visual hierarchy. User Experience: Prioritize readability, reduced visual fatigue, and professional appearance over visual spectacle.",
+    "component_style": "Cards with subtle borders, clean buttons with minimal hover states, professional forms with focus indicators, status badges with appropriate colors",
+    "layout_approach": "Responsive grid system, flexbox utilities, consistent spacing scale, mobile-first design"
+  },
+  
+  "external_references": {
+    "infrastructure": "infrastructure.json",
+    "python_expertise": "python-expertise.json", 
+    "project_templates": "project-templates.json"
+  },
+  
+  "component_library": {
+    "navigation": {
+      "navbar": "Professional top navigation with brand and menu items",
+      "classes": ["navbar", "navbar-brand", "navbar-nav", "nav-link"],
+      "features": ["sticky positioning", "backdrop blur", "hover states"]
+    },
+    "content": {
+      "card": "Primary content container with header and body",
+      "classes": ["card", "card-header", "card-title", "card-subtitle"],
+      "features": ["subtle borders", "hover effects", "responsive padding"]
+    },
+    "forms": {
+      "input": "Clean form inputs with focus states",
+      "classes": ["input", "label", "select"],
+      "features": ["focus indicators", "validation states", "consistent styling"]
+    },
+    "buttons": {
+      "variants": ["btn-primary", "btn-secondary", "btn-outline"],
+      "sizes": ["btn-sm", "btn-lg"],
+      "features": ["hover states", "icon support", "consistent spacing"]
+    },
+    "indicators": {
+      "badge": "Status and label indicators",
+      "classes": ["badge-primary", "badge-success", "badge-warning", "badge-danger"],
+      "features": ["icon support", "color coding", "rounded corners"]
+    }
+  },
+  
+  "development_guidelines": {
+    "css_integration": {
+      "method": "Single CSS file link in HTML head",
+      "cdn_fonts": "Google Fonts Inter family",
+      "icons": "Font Awesome CDN",
+      "theme_switching": "Replace CSS file reference for global theme change"
+    },
+    "responsive_design": {
+      "breakpoints": "Mobile-first approach",
+      "grid_system": "CSS Grid and Flexbox utilities", 
+      "container_max_width": "1200px"
+    },
+    "performance": {
+      "css_size": "Optimized for fast loading",
+      "font_loading": "Web font optimization",
+      "animations": "Minimal, purposeful transitions only"
+    }
+  },
+  
+  "integration_examples": {
+    "html_template": "<!DOCTYPE html><html><head><link rel=\"stylesheet\" href=\"css-themes/nodus-matte.css\"><link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css\"></head><body><!-- Nodus components here --></body></html>",
+    "basic_card": "<div class=\"card\"><div class=\"card-header\"><h2 class=\"card-title text-mint\">Title</h2></div><p class=\"text-gray-300\">Content</p></div>",
+    "button_group": "<div class=\"flex gap-md\"><button class=\"btn btn-primary\">Primary</button><button class=\"btn btn-secondary\">Secondary</button></div>"
+  },
+  
+  "file_references": {
+    "css_themes_directory": "/home/lauchlan/nodus-design-system/css-themes/",
+    "readme_file": "/home/lauchlan/nodus-design-system/README.md",
+    "design_config": "/home/lauchlan/nodus-design-system/design-config.json",
+    "infrastructure_config": "/home/lauchlan/nodus-design-system/infrastructure.json",
+    "python_expertise": "/home/lauchlan/nodus-design-system/python-expertise.json",
+    "project_templates": "/home/lauchlan/nodus-design-system/project-templates.json",
+    "api_documentation_template": "/home/lauchlan/nodus-design-system/API-DOCUMENTATION-TEMPLATE.md",
+    "gaps_template": "/home/lauchlan/nodus-design-system/NODUS-GAPS-TEMPLATE.md"
+  },
+  
+  "ai_model_instructions": {
+    "when_creating_projects": [
+      "Always reference the current active theme CSS file",
+      "Follow the design philosophy and vibe specifications",
+      "Check infrastructure.json for reserved ports before assigning new ones",
+      "Consider existing Docker environment for integration",
+      "Use component library classes and patterns",
+      "Maintain consistency with Nodus design principles",
+      "Reference python-expertise.json for module recommendations",
+      "Use project-templates.json for directory structure guidance",
+      "Create NODUS-GAPS.md in project root using template",
+      "Document any missing CSS utilities for potential global integration",
+      "Create comprehensive API documentation in docs/API.md following standard template",
+      "Include interactive API documentation (Swagger/ReDoc for FastAPI, similar for Flask)",
+      "Document all endpoints with request/response examples",
+      "Create DEVELOPMENT-NOTES.md to capture process for future replication"
+    ],
+    "gap_management_protocol": [
+      "Copy NODUS-GAPS-TEMPLATE.md to project as NODUS-GAPS.md",
+      "Document any missing utilities immediately",
+      "Add temporary project-specific CSS with clear documentation",
+      "Evaluate if gap represents universal need across projects",
+      "Submit universal gaps for integration into core nodus-matte.css",
+      "Remove temporary CSS once global solution is available"
+    ],
+    "design_system_independence": [
+      "Core Nodus CSS never references specific projects",
+      "Projects consume design system, never influence it directly",
+      "All project-specific validation documented in project repos only",
+      "Design decisions based on universal patterns, not specific implementations"
+    ],
+    "file_loading_sequence": [
+      "Load design-config.json for core design context",
+      "Load infrastructure.json for ports and Docker info",
+      "Load python-expertise.json for module expertise",
+      "Load project-templates.json for structure and GitHub workflow"
+    ],
+    "documentation_standards": [
+      "Create comprehensive documentation package (minimum 10 files)",
+      "Include quick start guide (5-minute path to running app)",
+      "Include complete user guide with workflow examples",
+      "Create docs/API.md with full endpoint documentation",
+      "Create DEVELOPMENT-NOTES.md capturing build process and patterns",
+      "Document all workflows from user perspective",
+      "Include troubleshooting section in all guides",
+      "Add version numbers and dates to all documentation",
+      "Use consistent markdown formatting with emojis for scanning",
+      "Create replication guide for future similar projects"
+    ],
+    "api_documentation_required": {
+      "mandatory_for": ["APIs", "web applications", "microservices", "dashboards with APIs"],
+      "file_location": "docs/API.md",
+      "minimum_sections": [
+        "Overview and base URL",
+        "Authentication (if applicable)",
+        "Complete endpoint list with HTTP methods",
+        "Request/response examples for each endpoint",
+        "Data models/schemas",
+        "Error responses and status codes",
+        "Complete workflow examples",
+        "Interactive documentation links (Swagger/ReDoc)"
+      ],
+      "best_practices": [
+        "Group endpoints by domain/resource",
+        "Include both success and error examples",
+        "Document query parameters and path variables",
+        "Show complete request bodies with all fields",
+        "Provide workflow examples showing multiple endpoints",
+        "Link to interactive API docs (FastAPI auto-generates)",
+        "Include rate limiting if applicable",
+        "Document CORS configuration"
+      ],
+      "example_structure": "See /home/lauchlan/gym-progress-tracker/docs/API.md as reference template"
+    }
+  }
+}
