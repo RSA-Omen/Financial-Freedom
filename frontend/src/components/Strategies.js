@@ -48,11 +48,71 @@ function Strategies({ debts }) {
 
   return (
     <div className="strategies">
+      {/* Strategy Comparison Header */}
+      <div className="card mb-lg">
+        <div className="card-header">
+          <h2 className="card-title">
+            <i className="fas fa-balance-scale me-2"></i>
+            Strategy Comparison: Avalanche vs Snowball
+          </h2>
+          <p className="text-secondary">
+            Compare the two most popular debt repayment strategies side by side
+          </p>
+        </div>
+        <div className="card-body">
+          <div className="strategy-overview grid grid-cols-1 md:grid-cols-2 gap-md">
+            <div className="strategy-card bg-danger-subtle p-4 rounded">
+              <h4 className="text-danger mb-2">
+                <i className="fas fa-fire me-2"></i>
+                Avalanche Strategy
+              </h4>
+              <p className="text-secondary mb-2">Pay highest interest rate debts first</p>
+              <div className="strategy-stats">
+                <div className="stat">
+                  <span className="stat-label">Time to Freedom:</span>
+                  <span className="stat-value text-danger font-bold">
+                    {avalanche?.summary?.months_to_zero || 'N/A'} months
+                  </span>
+                </div>
+                <div className="stat">
+                  <span className="stat-label">Total Interest:</span>
+                  <span className="stat-value text-danger font-bold">
+                    {formatCurrency(avalanche?.summary?.total_interest_paid || 0)}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="strategy-card bg-info-subtle p-4 rounded">
+              <h4 className="text-info mb-2">
+                <i className="fas fa-snowflake me-2"></i>
+                Snowball Strategy
+              </h4>
+              <p className="text-secondary mb-2">Pay smallest balance debts first</p>
+              <div className="strategy-stats">
+                <div className="stat">
+                  <span className="stat-label">Time to Freedom:</span>
+                  <span className="stat-value text-info font-bold">
+                    {snowball?.summary?.months_to_zero || 'N/A'} months
+                  </span>
+                </div>
+                <div className="stat">
+                  <span className="stat-label">Total Interest:</span>
+                  <span className="stat-value text-info font-bold">
+                    {formatCurrency(snowball?.summary?.total_interest_paid || 0)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-lg mb-lg">
         {/* Avalanche Strategy */}
         <div className="card">
           <div className="card-header">
-            <h3 className="card-title text-mint">
+            <h3 className="card-title text-danger">
               <i className="fas fa-fire me-2"></i>
               Avalanche Strategy
             </h3>
@@ -72,7 +132,7 @@ function Strategies({ debts }) {
         {/* Snowball Strategy */}
         <div className="card">
           <div className="card-header">
-            <h3 className="card-title text-mint">
+            <h3 className="card-title text-info">
               <i className="fas fa-snowflake me-2"></i>
               Snowball Strategy
             </h3>

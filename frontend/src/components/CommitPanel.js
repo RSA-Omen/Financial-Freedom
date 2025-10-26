@@ -9,10 +9,12 @@ const CommitPanel = ({ debts }) => {
   const [recommendation, setRecommendation] = useState(null);
   const [loading, setLoading] = useState(false);
   const [strategy, setStrategy] = useState('avalanche');
+  const [baseSimulation, setBaseSimulation] = useState(null);
 
   useEffect(() => {
     if (debts && debts.length > 0) {
       loadRecommendation();
+      loadBaseSimulation();
     }
   }, [debts, strategy]);
 
@@ -30,6 +32,18 @@ const CommitPanel = ({ debts }) => {
       setRecommendation(result);
     } catch (error) {
       console.error('Error loading recommendation:', error);
+    }
+  };
+
+  const loadBaseSimulation = async () => {
+    try {
+      console.log('🔄 Loading base simulation for strategy:', strategy);
+      // Load base simulation (no extra payment) to always show a chart
+      const result = await calculateImpact(0, 0, strategy);
+      console.log('✅ Base simulation loaded:', result.base_simulation?.summary);
+      setBaseSimulation(result.base_simulation);
+    } catch (error) {
+      console.error('❌ Error loading base simulation:', error);
     }
   };
 
@@ -145,6 +159,42 @@ const CommitPanel = ({ debts }) => {
               Enter any additional amount you can pay each month
             </div>
           </div>
+          
+          {/* Real-time Impact Display */}
+          {extraPayment > 0 && impact && (
+            <div className="real-time-impact mt-4 p-3 bg-success-subtle rounded">
+              <h5 className="text-success mb-2">
+                <i className="fas fa-bolt me-2"></i>
+                Real-time Impact
+              </h5>
+              <div className="impact-grid grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="impact-item text-center">
+                  <div className="impact-value text-success font-bold text-lg">
+                    {Math.round(impact.impact.months_saved * 30)} days
+                  </div>
+                  <div className="impact-label text-secondary text-sm">Days saved</div>
+                </div>
+                <div className="impact-item text-center">
+                  <div className="impact-value text-success font-bold text-lg">
+                    R{Math.round(impact.impact.interest_saved / impact.impact.months_saved)}
+                  </div>
+                  <div className="impact-label text-secondary text-sm">Interest saved per month</div>
+                </div>
+                <div className="impact-item text-center">
+                  <div className="impact-value text-success font-bold text-lg">
+                    {Math.round(impact.impact.months_saved * 30 / (extraPayment / 50))} days
+                  </div>
+                  <div className="impact-label text-secondary text-sm">Per R50 extra</div>
+                </div>
+              </div>
+              <div className="impact-message mt-3 text-center">
+                <p className="text-success font-bold">
+                  <i className="fas fa-magic me-1"></i>
+                  Every R50 extra removes ~{Math.round(impact.impact.months_saved * 30 / (extraPayment / 50))} days from your debt!
+                </p>
+              </div>
+            </div>
+          )}
           
           <div className="form-actions mt-4">
             <button 
@@ -267,23 +317,28 @@ const CommitPanel = ({ debts }) => {
       )}
 
       {/* Freedom Chart */}
-      {impact && !loading && (
-        <div className="card mb-4">
-          <div className="card-header">
-            <h4 className="card-title">
-              <i className="fas fa-chart-line me-2"></i>
-              Freedom Chart with Extra Payment
-            </h4>
+      {(() => {
+        const showChart = baseSimulation || (impact && !loading);
+        const timeline = impact && !loading ? impact.enhanced_simulation.simulation_results : baseSimulation?.simulation_results;
+        console.log('📊 Chart render check:', { showChart, hasTimeline: !!timeline, baseSimulation: !!baseSimulation, impact: !!impact, loading });
+        return showChart && (
+          <div className="card mb-4">
+            <div className="card-header">
+              <h4 className="card-title">
+                <i className="fas fa-chart-line me-2"></i>
+                {impact && !loading ? 'Freedom Chart with Extra Payment' : 'Freedom Chart'}
+              </h4>
+            </div>
+            <div className="card-body">
+              <FreedomChart 
+                timeline={timeline} 
+                title={impact && !loading ? "Your Path to Financial Freedom with Extra Payment" : "Your Path to Financial Freedom"}
+                summary={impact && !loading ? impact.enhanced_simulation.summary : baseSimulation?.summary}
+              />
+            </div>
           </div>
-          <div className="card-body">
-            <FreedomChart 
-              timeline={impact.enhanced_simulation.simulation_results} 
-              title="Your Path to Financial Freedom with Extra Payment"
-              summary={impact.enhanced_simulation.summary}
-            />
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Comparison Table */}
       {impact && !loading && (

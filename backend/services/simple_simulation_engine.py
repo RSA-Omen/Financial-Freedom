@@ -177,3 +177,162 @@ class SimpleSimulationEngine:
             'summary': summary,
             'final_debts': final_debts
         }
+    
+    def simulate_snowball(self, extra_payment: Decimal = Decimal('0'), max_months: int = 600) -> Dict[str, Any]:
+        """Simulate debt repayment using snowball strategy."""
+        # Create working copies
+        working_debts = [copy.deepcopy(debt) for debt in self.debts]
+        
+        simulation_results = []
+        total_interest_paid = Decimal('0')
+        total_payments_made = Decimal('0')
+        
+        for month in range(1, max_months + 1):
+            # Check if all debts are paid off
+            active_debts = [debt for debt in working_debts if debt.status == 'active']
+            if not active_debts:
+                break
+            
+            # Calculate current date
+            current_date = datetime.now() + timedelta(days=30 * (month - 1))
+            
+            month_data = {
+                'month': month,
+                'date': current_date.strftime('%Y-%m-%d'),
+                'debts': [],
+                'total_balance': Decimal('0'),
+                'interest_this_month': Decimal('0'),
+                'payments_this_month': Decimal('0'),
+                'paid_off_this_month': []
+            }
+            
+            # Sort debts by balance (smallest first) for snowball
+            active_debts.sort(key=lambda x: x.principal)
+            
+            # Calculate total available payment (all minimum payments + extra)
+            total_min_payments = sum(debt.min_payment for debt in active_debts)
+            available_payment = total_min_payments + extra_payment
+            
+            # Apply payments to each debt
+            for i, debt in enumerate(active_debts):
+                if debt.status != 'active':
+                    continue
+                
+                # Calculate interest
+                monthly_interest = debt.calculate_monthly_interest()
+                month_data['interest_this_month'] += monthly_interest
+                total_interest_paid += monthly_interest
+                
+                # Determine payment amount
+                if i == 0:  # Smallest balance debt gets extra payment
+                    payment_amount = debt.min_payment + extra_payment
+                else:
+                    payment_amount = debt.min_payment
+                
+                # Apply payment
+                payment_result = debt.apply_payment(payment_amount)
+                
+                # Track payments
+                month_data['payments_this_month'] += payment_amount
+                total_payments_made += payment_amount
+                
+                # Add debt info
+                debt_info = {
+                    'id': debt.id,
+                    'name': debt.name,
+                    'balance': debt.principal,
+                    'interest_paid': payment_result['interest_payment'],
+                    'payment_made': payment_amount,
+                    'status': debt.status
+                }
+                month_data['debts'].append(debt_info)
+                
+                # Check if paid off
+                if debt.status == 'paid':
+                    month_data['paid_off_this_month'].append(debt.name)
+            
+            # Calculate total balance
+            month_data['total_balance'] = sum(debt.principal for debt in working_debts if debt.status == 'active')
+            
+            simulation_results.append(month_data)
+        
+        # Calculate summary
+        final_debts = []
+        for debt in working_debts:
+            final_debts.append({
+                'id': debt.id,
+                'name': debt.name,
+                'final_balance': float(debt.principal),
+                'months_paid': debt.months_paid,
+                'status': debt.status,
+                'total_interest_paid': float(debt.total_interest_paid)
+            })
+        
+        # Find debt-free date
+        debt_free_date = None
+        for month_data in simulation_results:
+            if month_data['total_balance'] <= Decimal('0'):
+                debt_free_date = month_data['date']
+                break
+        
+        summary = {
+            'total_interest_paid': float(total_interest_paid),
+            'total_payments_made': float(total_payments_made),
+            'months_to_zero': len(simulation_results),
+            'debt_free_date': debt_free_date,
+            'final_total_balance': float(sum(debt.principal for debt in working_debts if debt.status == 'active'))
+        }
+        
+        return {
+            'simulation_results': simulation_results,
+            'summary': summary,
+            'final_debts': final_debts
+        }
+    
+    def compare_strategies(self, debts: List[SimpleDebt], extra_payment: Decimal = Decimal('0')) -> Dict[str, Any]:
+        """Compare avalanche and snowball strategies."""
+        # Set debts
+        self.debts = debts
+        
+        # Run both simulations
+        avalanche_result = self.simulate_avalanche(extra_payment)
+        snowball_result = self.simulate_snowball(extra_payment)
+        
+        return {
+            'avalanche': avalanche_result,
+            'snowball': snowball_result
+        }
+    
+    def calculate_extra_payment_impact(self, debts: List[SimpleDebt], base_extra: Decimal, 
+                                     additional_extra: Decimal, strategy: str = 'avalanche') -> Dict[str, Any]:
+        """Calculate the impact of additional extra payment."""
+        # Set debts
+        self.debts = debts
+        
+        # Run simulation with base extra payment
+        if strategy == 'avalanche':
+            base_result = self.simulate_avalanche(base_extra)
+        else:
+            base_result = self.simulate_snowball(base_extra)
+        
+        # Run simulation with additional extra payment
+        total_extra = base_extra + additional_extra
+        if strategy == 'avalanche':
+            enhanced_result = self.simulate_avalanche(total_extra)
+        else:
+            enhanced_result = self.simulate_snowball(total_extra)
+        
+        # Calculate impact
+        months_saved = base_result['summary']['months_to_zero'] - enhanced_result['summary']['months_to_zero']
+        interest_saved = base_result['summary']['total_interest_paid'] - enhanced_result['summary']['total_interest_paid']
+        
+        return {
+            'base_simulation': base_result,
+            'enhanced_simulation': enhanced_result,
+            'impact': {
+                'months_saved': months_saved,
+                'interest_saved': float(interest_saved),
+                'new_debt_free_date': enhanced_result['summary']['debt_free_date'],
+                'roi_per_rand': float(interest_saved / float(additional_extra)) if additional_extra > 0 else 0
+            }
+        }
