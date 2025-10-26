@@ -4,14 +4,14 @@ function SummaryCards({ debts, simulationResults }) {
   // Handle case where debts is undefined or null
   if (!debts || !Array.isArray(debts)) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-md mb-lg">
-        <div className="card">
-          <div className="card-header">
-            <h3 className="card-title text-mint">Loading...</h3>
+      <div className="grid grid-cols-4 gap-sm mb-md">
+        <div className="card card-sm">
+          <div className="card-header py-sm">
+            <h4 className="card-title text-mint text-sm">Loading...</h4>
           </div>
-          <div className="card-body text-center">
-            <p className="text-primary text-3xl font-bold">R 0.00</p>
-            <p className="text-secondary text-sm">Please wait</p>
+          <div className="card-body text-center py-sm">
+            <p className="text-primary text-xl font-bold">R 0.00</p>
+            <p className="text-secondary text-xs">Please wait</p>
           </div>
         </div>
       </div>
@@ -35,48 +35,48 @@ function SummaryCards({ debts, simulationResults }) {
   const formatPercentage = (value) => `${(parseFloat(value) * 100).toFixed(2)}%`;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-md mb-lg">
+    <div className="grid grid-cols-4 gap-sm mb-md">
       {/* Total Debt Card */}
-      <div className="card">
-        <div className="card-header">
-          <h3 className="card-title text-mint">Total Debt</h3>
+      <div className="card card-sm">
+        <div className="card-header py-sm">
+          <h4 className="card-title text-mint text-sm">Total Debt</h4>
         </div>
-        <div className="card-body text-center">
-          <p className="text-primary text-3xl font-bold">{formatCurrency(totalDebt)}</p>
-          <p className="text-secondary text-sm">Outstanding Balance</p>
+        <div className="card-body text-center py-sm">
+          <p className="text-primary text-xl font-bold">{formatCurrency(totalDebt)}</p>
+          <p className="text-secondary text-xs">Outstanding Balance</p>
         </div>
       </div>
 
       {/* Monthly Payments Card */}
-      <div className="card">
-        <div className="card-header">
-          <h3 className="card-title text-mint">Monthly Payments</h3>
+      <div className="card card-sm">
+        <div className="card-header py-sm">
+          <h4 className="card-title text-mint text-sm">Monthly Payments</h4>
         </div>
-        <div className="card-body text-center">
-          <p className="text-primary text-3xl font-bold">{formatCurrency(totalMonthlyPayments)}</p>
-          <p className="text-secondary text-sm">Minimum Required</p>
+        <div className="card-body text-center py-sm">
+          <p className="text-primary text-xl font-bold">{formatCurrency(totalMonthlyPayments)}</p>
+          <p className="text-secondary text-xs">Minimum Required</p>
         </div>
       </div>
 
       {/* Average APR Card */}
-      <div className="card">
-        <div className="card-header">
-          <h3 className="card-title text-mint">Average APR</h3>
+      <div className="card card-sm">
+        <div className="card-header py-sm">
+          <h4 className="card-title text-mint text-sm">Average APR</h4>
         </div>
-        <div className="card-body text-center">
-          <p className="text-primary text-3xl font-bold">{formatPercentage(averageAPR)}</p>
-          <p className="text-secondary text-sm">Weighted Average</p>
+        <div className="card-body text-center py-sm">
+          <p className="text-primary text-xl font-bold">{formatPercentage(averageAPR)}</p>
+          <p className="text-secondary text-xs">Weighted Average</p>
         </div>
       </div>
 
       {/* Highest APR Card */}
-      <div className="card">
-        <div className="card-header">
-          <h3 className="card-title text-mint">Highest APR</h3>
+      <div className="card card-sm">
+        <div className="card-header py-sm">
+          <h4 className="card-title text-mint text-sm">Highest APR</h4>
         </div>
-        <div className="card-body text-center">
-          <p className="text-primary text-3xl font-bold">{formatPercentage(highestAPR)}</p>
-          <p className="text-secondary text-sm">Priority Target</p>
+        <div className="card-body text-center py-sm">
+          <p className="text-primary text-xl font-bold">{formatPercentage(highestAPR)}</p>
+          <p className="text-secondary text-xs">Priority Target</p>
         </div>
       </div>
     </div>
