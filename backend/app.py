@@ -14,7 +14,7 @@ from datetime import datetime
 import os
 
 # Import services
-from services.simulation_engine import SimulationEngine, Debt
+from services.simple_simulation_engine import SimpleSimulationEngine, SimpleDebt
 from services.avalanche_strategy import AvalancheStrategy
 from services.snowball_strategy import SnowballStrategy
 from services.hybrid_strategy import HybridStrategy
@@ -32,7 +32,7 @@ DB_CONFIG = {
 }
 
 # Initialize services
-simulation_engine = SimulationEngine()
+simulation_engine = SimpleSimulationEngine()
 avalanche_strategy = AvalancheStrategy()
 snowball_strategy = SnowballStrategy()
 hybrid_strategy = HybridStrategy()
@@ -49,21 +49,18 @@ def get_db_connection():
 
 
 def debt_from_row(row):
-    """Convert database row to Debt object."""
+    """Convert database row to SimpleDebt object."""
     # Convert APR from percentage to decimal if it's > 1
     apr_value = Decimal(str(row[3]))
     if apr_value > 1:
         apr_value = apr_value / Decimal('100')
     
-    return Debt(
+    return SimpleDebt(
         debt_id=row[0],
         name=row[1],
         principal=Decimal(str(row[2])),
         apr=apr_value,
-        min_payment=Decimal(str(row[4])),
-        payment_frequency=row[5],
-        compounding=row[6],
-        status=row[7]
+        min_payment=Decimal(str(row[4]))
     )
 
 
@@ -353,8 +350,16 @@ def run_simulation():
         if not debts:
             return jsonify({'error': 'No active debts found'}), 400
         
-        # Run simulation
-        result = simulation_engine.run_simulation(debts, extra_payment, strategy)
+        # Load debts into simulation engine
+        simulation_engine.debts = debts
+        
+        # Run simulation using new engine
+        if strategy == 'avalanche':
+            result = simulation_engine.simulate_avalanche(extra_payment)
+        elif strategy == 'snowball':
+            result = simulation_engine.simulate_snowball(extra_payment)
+        else:
+            result = simulation_engine.simulate_avalanche(extra_payment)  # Default to avalanche
         
         return jsonify(result)
     

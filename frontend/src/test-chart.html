@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Freedom Chart Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .chart-container { border: 1px solid #ccc; padding: 20px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <h1>Freedom Chart Test</h1>
+    <div class="chart-container">
+        <h3>Empty Chart Test</h3>
+        <p>This should show an empty chart placeholder</p>
+    </div>
+    
+    <div class="chart-container">
+        <h3>API Test</h3>
+        <button onclick="testAPI()">Test API</button>
+        <div id="api-result"></div>
+    </div>
+
+    <script>
+        async function testAPI() {
+            try {
+                console.log('Testing API...');
+                const response = await fetch('http://localhost:5007/api/debts');
+                const data = await response.json();
+                console.log('API Response:', data);
+                document.getElementById('api-result').innerHTML = 
+                    '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            } catch (error) {
+                console.error('API Error:', error);
+                document.getElementById('api-result').innerHTML = 
+                    '<p style="color: red;">Error: ' + error.message + '</p>';
+            }
+        }
+    </script>
+</body>
+</html>
+

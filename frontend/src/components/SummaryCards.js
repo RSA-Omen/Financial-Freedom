@@ -1,6 +1,23 @@
 import React from 'react';
 
 function SummaryCards({ debts, simulationResults }) {
+  // Handle case where debts is undefined or null
+  if (!debts || !Array.isArray(debts)) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-md mb-lg">
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title text-mint">Loading...</h3>
+          </div>
+          <div className="card-body text-center">
+            <p className="text-primary text-3xl font-bold">R 0.00</p>
+            <p className="text-secondary text-sm">Please wait</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const totalDebt = debts.reduce((sum, debt) => sum + parseFloat(debt.principal), 0);
   const totalMonthlyPayments = debts.reduce((sum, debt) => sum + parseFloat(debt.min_payment), 0);
   

@@ -15,7 +15,7 @@ function Strategies({ debts }) {
   const loadComparison = async () => {
     try {
       setLoading(true);
-      const results = await compareStrategies(debts, 0);
+      const results = await compareStrategies(0);
       setComparisonResults(results);
     } catch (error) {
       console.error('Error loading strategy comparison:', error);
@@ -59,10 +59,11 @@ function Strategies({ debts }) {
             <p className="text-secondary text-sm">Highest interest rate first (mathematically optimal)</p>
           </div>
           <div className="card-body">
-            {avalanche && avalanche.timeline && (
+            {avalanche && avalanche.simulation_results && (
               <FreedomChart 
-                timeline={avalanche.timeline} 
+                timeline={avalanche.simulation_results} 
                 title="Avalanche Freedom Chart"
+                summary={avalanche.summary}
               />
             )}
           </div>
@@ -78,10 +79,11 @@ function Strategies({ debts }) {
             <p className="text-secondary text-sm">Smallest balance first (psychological wins)</p>
           </div>
           <div className="card-body">
-            {snowball && snowball.timeline && (
+            {snowball && snowball.simulation_results && (
               <FreedomChart 
-                timeline={snowball.timeline} 
+                timeline={snowball.simulation_results} 
                 title="Snowball Freedom Chart"
+                summary={snowball.summary}
               />
             )}
           </div>
@@ -107,32 +109,32 @@ function Strategies({ debts }) {
               <tbody>
                 <tr>
                   <td className="font-bold">Months to Zero</td>
-                  <td className="text-center text-mint">{avalanche?.months_to_zero || 'N/A'}</td>
-                  <td className="text-center text-mint">{snowball?.months_to_zero || 'N/A'}</td>
+                  <td className="text-center text-mint">{avalanche?.summary?.months_to_zero || 'N/A'}</td>
+                  <td className="text-center text-mint">{snowball?.summary?.months_to_zero || 'N/A'}</td>
                   <td className="text-center">
-                    {avalanche?.months_to_zero && snowball?.months_to_zero ? (
-                      <span className={avalanche.months_to_zero < snowball.months_to_zero ? 'text-success' : 'text-danger'}>
-                        {snowball.months_to_zero - avalanche.months_to_zero} months
+                    {avalanche?.summary?.months_to_zero && snowball?.summary?.months_to_zero ? (
+                      <span className={avalanche.summary.months_to_zero < snowball.summary.months_to_zero ? 'text-success' : 'text-danger'}>
+                        {snowball.summary.months_to_zero - avalanche.summary.months_to_zero} months
                       </span>
                     ) : 'N/A'}
                   </td>
                 </tr>
                 <tr>
                   <td className="font-bold">Total Interest Paid</td>
-                  <td className="text-center text-mint">{formatCurrency(avalanche?.total_interest_paid || 0)}</td>
-                  <td className="text-center text-mint">{formatCurrency(snowball?.total_interest_paid || 0)}</td>
+                  <td className="text-center text-mint">{formatCurrency(avalanche?.summary?.total_interest_paid || 0)}</td>
+                  <td className="text-center text-mint">{formatCurrency(snowball?.summary?.total_interest_paid || 0)}</td>
                   <td className="text-center">
-                    {avalanche?.total_interest_paid && snowball?.total_interest_paid ? (
-                      <span className={avalanche.total_interest_paid < snowball.total_interest_paid ? 'text-success' : 'text-danger'}>
-                        {formatCurrency(snowball.total_interest_paid - avalanche.total_interest_paid)}
+                    {avalanche?.summary?.total_interest_paid && snowball?.summary?.total_interest_paid ? (
+                      <span className={avalanche.summary.total_interest_paid < snowball.summary.total_interest_paid ? 'text-success' : 'text-danger'}>
+                        {formatCurrency(snowball.summary.total_interest_paid - avalanche.summary.total_interest_paid)}
                       </span>
                     ) : 'N/A'}
                   </td>
                 </tr>
                 <tr>
                   <td className="font-bold">Payoff Date</td>
-                  <td className="text-center">{avalanche?.payoff_date || 'N/A'}</td>
-                  <td className="text-center">{snowball?.payoff_date || 'N/A'}</td>
+                  <td className="text-center">{avalanche?.summary?.debt_free_date || 'N/A'}</td>
+                  <td className="text-center">{snowball?.summary?.debt_free_date || 'N/A'}</td>
                   <td className="text-center">-</td>
                 </tr>
               </tbody>

@@ -45,21 +45,21 @@ class Debt:
         if self.status != 'active':
             return {'principal_payment': Decimal('0'), 'interest_payment': Decimal('0'), 'remaining': self.principal}
         
-        interest_this_month = self.calculate_monthly_interest()
-        self.total_interest_paid += interest_this_month
+        # Calculate monthly interest
+        monthly_interest = self.calculate_monthly_interest()
         
         # Add interest to principal first
-        self.principal += interest_this_month
+        self.principal += monthly_interest
         
-        # Apply payment
+        # Apply payment - reduce principal by payment amount
         if payment_amount >= self.principal:
             # Debt is paid off
-            principal_payment = self.principal
-            interest_payment = interest_this_month
+            principal_payment = self.principal - monthly_interest
+            interest_payment = monthly_interest
             self.principal = Decimal('0')
             self.status = 'paid'
         else:
-            # Partial payment
+            # Partial payment - reduce principal by payment amount
             principal_payment = payment_amount
             interest_payment = Decimal('0')
             self.principal -= payment_amount
@@ -121,17 +121,18 @@ class SimulationEngine:
             # Calculate interest and apply minimum payments
             for debt in working_debts:
                 if debt.status == 'active':
-                    interest = debt.calculate_monthly_interest()
-                    debt.principal += interest
-                    debt.total_interest_paid += interest
-                    total_interest_paid += interest
-                    month_data['interest_this_month'] += interest
-                    month_data['total_balance'] += debt.principal
-                    
-                    # Apply minimum payment
+                    # Apply minimum payment (this handles interest calculation and application)
                     payment_result = debt.apply_payment(debt.min_payment)
+                    
+                    # Track interest and payments
+                    month_data['interest_this_month'] += payment_result['interest_payment']
                     month_data['payments_this_month'] += debt.min_payment
                     total_payments_made += debt.min_payment
+                    debt.total_interest_paid += payment_result['interest_payment']
+                    total_interest_paid += payment_result['interest_payment']
+                    
+                    # Add current balance to total (after payment)
+                    month_data['total_balance'] += debt.principal
                     
                     # Track debt status
                     debt_data = {

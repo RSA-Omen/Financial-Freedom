@@ -20,16 +20,22 @@ function App() {
   const loadData = async () => {
     try {
       setLoading(true);
+      console.log('🔄 Loading data...');
       const debtsData = await getDebts();
+      console.log('📊 Debts loaded:', debtsData);
       setDebts(debtsData.debts || []);
       
       // Run simulation for dashboard
       if (debtsData.debts && debtsData.debts.length > 0) {
+        console.log('🎯 Running simulation...');
         const simulation = await runSimulation('avalanche', 0);
+        console.log('📈 Simulation results:', simulation);
         setSimulationResults(simulation);
+      } else {
+        console.log('❌ No debts found');
       }
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error('❌ Error loading data:', error);
     } finally {
       setLoading(false);
     }

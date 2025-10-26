@@ -277,8 +277,9 @@ const CommitPanel = ({ debts }) => {
           </div>
           <div className="card-body">
             <FreedomChart 
-              timeline={impact.enhanced_simulation.timeline} 
-              title="Your Path to Financial Freedom"
+              timeline={impact.enhanced_simulation.simulation_results} 
+              title="Your Path to Financial Freedom with Extra Payment"
+              summary={impact.enhanced_simulation.summary}
             />
           </div>
         </div>
