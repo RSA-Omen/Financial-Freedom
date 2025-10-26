@@ -131,15 +131,12 @@ class SimulationEngine:
                     debt.total_interest_paid += payment_result['interest_payment']
                     total_interest_paid += payment_result['interest_payment']
                     
-                    # Add current balance to total (after payment)
-                    month_data['total_balance'] += debt.principal
-                    
                     # Track debt status
                     debt_data = {
                         'id': debt.id,
                         'name': debt.name,
                         'balance': debt.principal,
-                        'interest_paid': interest,
+                        'interest_paid': payment_result['interest_payment'],
                         'payment_made': debt.min_payment,
                         'status': debt.status
                     }
@@ -151,20 +148,35 @@ class SimulationEngine:
                         available_extra += debt.min_payment
             
             # Apply extra payment according to strategy
-            if available_extra > 0:
+            while available_extra > 0:
                 target_debt = self._get_target_debt(working_debts, strategy)
-                if target_debt:
-                    extra_result = target_debt.apply_payment(available_extra)
-                    month_data['payments_this_month'] += available_extra
-                    total_payments_made += available_extra
-                    month_data['total_balance'] -= available_extra
+                if not target_debt:
+                    break
                     
-                    if extra_result['paid_off']:
-                        month_data['paid_off_this_month'].append(target_debt.name)
-                        # Add freed payment to available extra for next month
-                        available_extra = target_debt.min_payment
-                    else:
-                        available_extra = Decimal('0')
+                extra_result = target_debt.apply_payment(available_extra)
+                month_data['payments_this_month'] += available_extra
+                total_payments_made += available_extra
+                
+                # Update the debt data in month_data
+                for debt_data in month_data['debts']:
+                    if debt_data['id'] == target_debt.id:
+                        debt_data['balance'] = target_debt.principal
+                        debt_data['payment_made'] += available_extra
+                        debt_data['status'] = target_debt.status
+                        break
+                
+                if extra_result['paid_off']:
+                    month_data['paid_off_this_month'].append(target_debt.name)
+                    # Add freed payment to available extra for next iteration
+                    available_extra = target_debt.min_payment
+                else:
+                    available_extra = Decimal('0')
+            
+            # Store available_extra for next month
+            month_data['available_extra_next_month'] = available_extra
+            
+            # Calculate total balance after all payments
+            month_data['total_balance'] = sum(debt.principal for debt in working_debts if debt.status == 'active')
             
             simulation_results.append(month_data)
         

@@ -22,6 +22,7 @@ function FreedomChart({ timeline, title = "Freedom Chart", summary = null }) {
   // Prepare data for the chart
   const chartData = timeline.map(month => ({
     date: month.date,
+    month: `Month ${month.month}`,
     'Total Debt': parseFloat(month.total_balance),
     'Interest Accrued': parseFloat(month.interest_this_month),
     'Principal Paid': parseFloat(month.payments_this_month),
@@ -69,33 +70,37 @@ function FreedomChart({ timeline, title = "Freedom Chart", summary = null }) {
     return date.toLocaleDateString('en-ZA', { month: 'short', year: '2-digit' });
   };
 
-  // Custom Tooltip for more details
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      const monthData = timeline.find(m => m.date === label);
-      return (
-        <div className="recharts-tooltip-wrapper card">
-          <p className="label text-mint">{`Date: ${label}`}</p>
-          {payload.map((entry, index) => (
-            <p key={`item-${index}`} style={{ color: entry.color }}>
-              {`${entry.name}: R ${entry.value.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-            </p>
-          ))}
-          {monthData && monthData.debts && (
-            <div className="mt-sm">
-              <p className="text-secondary font-bold">Debt Balances:</p>
-              {monthData.debts.map(debt => (
-                <p key={debt.id} className="text-secondary text-sm">
-                  {debt.name}: R {parseFloat(debt.balance).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {debt.status === 'paid' && '(Paid Off)'}
+      // Custom Tooltip for more details
+      const CustomTooltip = ({ active, payload, label }) => {
+        if (active && payload && payload.length) {
+          const monthNumber = parseInt(label.replace('Month ', ''));
+          const monthData = timeline.find(m => m.month === monthNumber);
+          return (
+            <div className="recharts-tooltip-wrapper card">
+              <p className="label text-mint">{`${label}`}</p>
+              {monthData && (
+                <p className="text-secondary text-sm">{`Date: ${monthData.date}`}</p>
+              )}
+              {payload.map((entry, index) => (
+                <p key={`item-${index}`} style={{ color: entry.color }}>
+                  {`${entry.name}: R ${entry.value.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                 </p>
               ))}
+              {monthData && monthData.debts && (
+                <div className="mt-sm">
+                  <p className="text-secondary font-bold">Debt Balances:</p>
+                  {monthData.debts.map(debt => (
+                    <p key={debt.id} className="text-secondary text-sm">
+                      {debt.name}: R {parseFloat(debt.balance).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {debt.status === 'paid' && '(Paid Off)'}
+                    </p>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      );
-    }
-    return null;
-  };
+          );
+        }
+        return null;
+      };
 
   // Calculate debt-free date from summary or timeline
   const debtFreeDate = summary?.debt_free_date || (chartData.length > 0 ? chartData[chartData.length - 1].date : null);
@@ -130,10 +135,13 @@ function FreedomChart({ timeline, title = "Freedom Chart", summary = null }) {
         >
           <CartesianGrid strokeDasharray="3 3" stroke="var(--nodus-border)" />
           <XAxis 
-            dataKey="date" 
+            dataKey="month" 
             stroke="var(--nodus-text-secondary)"
-            tickFormatter={formatXAxisTick}
             tick={{ fontSize: 12 }}
+            interval="preserveStartEnd"
+            tickCount={Math.min(chartData.length, 15)}
+            type="category"
+            scale="point"
           />
           <YAxis 
             stroke="var(--nodus-text-secondary)" 
@@ -151,11 +159,11 @@ function FreedomChart({ timeline, title = "Freedom Chart", summary = null }) {
           />
           {/* Add reference lines for debt payoff milestones */}
           {payoffMilestones.map((milestone, index) => {
-            console.log(`Adding reference line for ${milestone.debtName} at ${milestone.date}`);
+            console.log(`Adding reference line for ${milestone.debtName} at Month ${milestone.monthNumber}`);
             return (
               <ReferenceLine
                 key={`milestone-${index}`}
-                x={milestone.date}
+                x={`Month ${milestone.monthNumber}`}
                 stroke="#00d4aa"
                 strokeWidth={4}
                 strokeDasharray="10 5"
