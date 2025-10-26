@@ -21,37 +21,37 @@ class SimpleDebt:
         """Calculate monthly interest."""
         return self.principal * (self.apr / Decimal('12'))
     
+    def apply_monthly_interest(self):
+        """Apply monthly interest to principal. Should be called once per month."""
+        if self.status != 'active':
+            return Decimal('0')
+        
+        monthly_interest = self.calculate_monthly_interest()
+        self.principal += monthly_interest
+        self.total_interest_paid += monthly_interest
+        return monthly_interest
+    
     def apply_payment(self, payment_amount: Decimal) -> Dict[str, Any]:
-        """Apply payment to debt."""
+        """Apply payment to debt. Interest should be applied separately before calling this."""
         if self.status != 'active':
             return {'principal_payment': Decimal('0'), 'interest_payment': Decimal('0'), 'remaining': self.principal}
         
-        # Calculate monthly interest
-        monthly_interest = self.calculate_monthly_interest()
-        
-        # Add interest to principal
-        self.principal += monthly_interest
-        
-        # Apply payment
+        # Apply payment directly to principal
         if payment_amount >= self.principal:
-            # Payment covers full balance
-            interest_payment = monthly_interest
-            principal_payment = self.principal - monthly_interest
+            # Payment covers full remaining balance
+            principal_payment = self.principal
             self.principal = Decimal('0')
             self.status = 'paid'
         else:
-            # Partial payment
-            interest_payment = monthly_interest
-            principal_payment = payment_amount - monthly_interest
-            self.principal -= payment_amount
+            # Partial principal payment
+            principal_payment = payment_amount
+            self.principal -= principal_payment
         
-        # Track totals
-        self.total_interest_paid += interest_payment
         self.months_paid += 1
         
         return {
             'principal_payment': principal_payment,
-            'interest_payment': interest_payment,
+            'interest_payment': Decimal('0'),  # Interest tracked separately now
             'remaining': self.principal,
             'paid_off': self.status == 'paid'
         }
@@ -76,6 +76,10 @@ class SimpleSimulationEngine:
         total_interest_paid = Decimal('0')
         total_payments_made = Decimal('0')
         
+        # Calculate total available payment once at the beginning (constant throughout simulation)
+        total_min_payments = sum(debt.min_payment for debt in self.debts)
+        total_available_payment = total_min_payments + extra_payment
+        
         for month in range(1, max_months + 1):
             # Check if all debts are paid off
             active_debts = [debt for debt in working_debts if debt.status == 'active']
@@ -98,40 +102,35 @@ class SimpleSimulationEngine:
             # Sort debts by APR (highest first) for avalanche
             active_debts.sort(key=lambda x: x.apr, reverse=True)
             
-            # Calculate total available payment (all minimum payments + extra)
-            total_min_payments = sum(debt.min_payment for debt in active_debts)
-            available_payment = total_min_payments + extra_payment
+            # Step 0: Apply monthly interest to all active debts (once per month)
+            debt_interest_map = {}
+            for debt in active_debts:
+                if debt.status != 'active':
+                    continue
+                monthly_interest = debt.apply_monthly_interest()
+                debt_interest_map[debt.id] = monthly_interest
+                month_data['interest_this_month'] += monthly_interest
+                total_interest_paid += monthly_interest
             
-            # Apply payments to each debt
-            for i, debt in enumerate(active_debts):
+            # Step 1: Apply minimum payments to all active debts
+            for debt in active_debts:
                 if debt.status != 'active':
                     continue
                 
-                # Calculate interest
-                monthly_interest = debt.calculate_monthly_interest()
-                month_data['interest_this_month'] += monthly_interest
-                total_interest_paid += monthly_interest
-                
-                # Determine payment amount
-                if i == 0:  # Highest APR debt gets extra payment
-                    payment_amount = debt.min_payment + extra_payment
-                else:
-                    payment_amount = debt.min_payment
-                
-                # Apply payment
-                payment_result = debt.apply_payment(payment_amount)
+                # Apply minimum payment
+                payment_result = debt.apply_payment(debt.min_payment)
                 
                 # Track payments
-                month_data['payments_this_month'] += payment_amount
-                total_payments_made += payment_amount
+                month_data['payments_this_month'] += debt.min_payment
+                total_payments_made += debt.min_payment
                 
                 # Add debt info
                 debt_info = {
                     'id': debt.id,
                     'name': debt.name,
                     'balance': debt.principal,
-                    'interest_paid': payment_result['interest_payment'],
-                    'payment_made': payment_amount,
+                    'interest_paid': debt_interest_map.get(debt.id, Decimal('0')),
+                    'payment_made': debt.min_payment,
                     'status': debt.status
                 }
                 month_data['debts'].append(debt_info)
@@ -139,6 +138,43 @@ class SimpleSimulationEngine:
                 # Check if paid off
                 if debt.status == 'paid':
                     month_data['paid_off_this_month'].append(debt.name)
+            
+            # Step 2: Reallocate freed payments and extra payment to remaining debts
+            # Calculate how much extra payment is available (freed payments + extra payment)
+            # Use the original total available payment to maintain constant payments
+            remaining_payment = total_available_payment - month_data['payments_this_month']
+            
+            while remaining_payment > 0:
+                # Get remaining active debts sorted by APR (highest first for avalanche)
+                remaining_debts = [debt for debt in working_debts if debt.status == 'active']
+                if not remaining_debts:
+                    break
+                
+                remaining_debts.sort(key=lambda x: x.apr, reverse=True)
+                target_debt = remaining_debts[0]
+                
+                # Apply remaining payment to target debt
+                extra_result = target_debt.apply_payment(remaining_payment)
+                
+                # Update the debt info in month_data
+                for debt_info in month_data['debts']:
+                    if debt_info['id'] == target_debt.id:
+                        debt_info['balance'] = target_debt.principal
+                        debt_info['payment_made'] += remaining_payment
+                        debt_info['status'] = target_debt.status
+                        break
+                
+                # Track extra payment
+                month_data['payments_this_month'] += remaining_payment
+                total_payments_made += remaining_payment
+                
+                # Check if target debt was paid off
+                if target_debt.status == 'paid':
+                    month_data['paid_off_this_month'].append(target_debt.name)
+                    # Add the freed payment to remaining_payment for next iteration
+                    remaining_payment = target_debt.min_payment
+                else:
+                    remaining_payment = Decimal('0')  # No more payment available
             
             # Calculate total balance
             month_data['total_balance'] = sum(debt.principal for debt in working_debts if debt.status == 'active')
@@ -187,6 +223,10 @@ class SimpleSimulationEngine:
         total_interest_paid = Decimal('0')
         total_payments_made = Decimal('0')
         
+        # Calculate total available payment once at the beginning (constant throughout simulation)
+        total_min_payments = sum(debt.min_payment for debt in self.debts)
+        total_available_payment = total_min_payments + extra_payment
+        
         for month in range(1, max_months + 1):
             # Check if all debts are paid off
             active_debts = [debt for debt in working_debts if debt.status == 'active']
@@ -209,40 +249,35 @@ class SimpleSimulationEngine:
             # Sort debts by balance (smallest first) for snowball
             active_debts.sort(key=lambda x: x.principal)
             
-            # Calculate total available payment (all minimum payments + extra)
-            total_min_payments = sum(debt.min_payment for debt in active_debts)
-            available_payment = total_min_payments + extra_payment
+            # Step 0: Apply monthly interest to all active debts (once per month)
+            debt_interest_map = {}
+            for debt in active_debts:
+                if debt.status != 'active':
+                    continue
+                monthly_interest = debt.apply_monthly_interest()
+                debt_interest_map[debt.id] = monthly_interest
+                month_data['interest_this_month'] += monthly_interest
+                total_interest_paid += monthly_interest
             
-            # Apply payments to each debt
-            for i, debt in enumerate(active_debts):
+            # Step 1: Apply minimum payments to all active debts
+            for debt in active_debts:
                 if debt.status != 'active':
                     continue
                 
-                # Calculate interest
-                monthly_interest = debt.calculate_monthly_interest()
-                month_data['interest_this_month'] += monthly_interest
-                total_interest_paid += monthly_interest
-                
-                # Determine payment amount
-                if i == 0:  # Smallest balance debt gets extra payment
-                    payment_amount = debt.min_payment + extra_payment
-                else:
-                    payment_amount = debt.min_payment
-                
-                # Apply payment
-                payment_result = debt.apply_payment(payment_amount)
+                # Apply minimum payment
+                payment_result = debt.apply_payment(debt.min_payment)
                 
                 # Track payments
-                month_data['payments_this_month'] += payment_amount
-                total_payments_made += payment_amount
+                month_data['payments_this_month'] += debt.min_payment
+                total_payments_made += debt.min_payment
                 
                 # Add debt info
                 debt_info = {
                     'id': debt.id,
                     'name': debt.name,
                     'balance': debt.principal,
-                    'interest_paid': payment_result['interest_payment'],
-                    'payment_made': payment_amount,
+                    'interest_paid': debt_interest_map.get(debt.id, Decimal('0')),
+                    'payment_made': debt.min_payment,
                     'status': debt.status
                 }
                 month_data['debts'].append(debt_info)
@@ -250,6 +285,43 @@ class SimpleSimulationEngine:
                 # Check if paid off
                 if debt.status == 'paid':
                     month_data['paid_off_this_month'].append(debt.name)
+            
+            # Step 2: Reallocate freed payments and extra payment to remaining debts
+            # Calculate how much extra payment is available (freed payments + extra payment)
+            # Use the original total available payment to maintain constant payments
+            remaining_payment = total_available_payment - month_data['payments_this_month']
+            
+            while remaining_payment > 0:
+                # Get remaining active debts sorted by balance (smallest first for snowball)
+                remaining_debts = [debt for debt in working_debts if debt.status == 'active']
+                if not remaining_debts:
+                    break
+                
+                remaining_debts.sort(key=lambda x: x.principal)
+                target_debt = remaining_debts[0]
+                
+                # Apply remaining payment to target debt
+                extra_result = target_debt.apply_payment(remaining_payment)
+                
+                # Update the debt info in month_data
+                for debt_info in month_data['debts']:
+                    if debt_info['id'] == target_debt.id:
+                        debt_info['balance'] = target_debt.principal
+                        debt_info['payment_made'] += remaining_payment
+                        debt_info['status'] = target_debt.status
+                        break
+                
+                # Track extra payment
+                month_data['payments_this_month'] += remaining_payment
+                total_payments_made += remaining_payment
+                
+                # Check if target debt was paid off
+                if target_debt.status == 'paid':
+                    month_data['paid_off_this_month'].append(target_debt.name)
+                    # Add the freed payment to remaining_payment for next iteration
+                    remaining_payment = target_debt.min_payment
+                else:
+                    remaining_payment = Decimal('0')  # No more payment available
             
             # Calculate total balance
             month_data['total_balance'] = sum(debt.principal for debt in working_debts if debt.status == 'active')
