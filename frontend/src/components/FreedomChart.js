@@ -1,7 +1,7 @@
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
 
-function FreedomChart({ timeline, title = "Freedom Chart", summary = null }) {
+function FreedomChart({ timeline, title = "Freedom Chart", summary = null, baselineTimeline = null, baselineSummary = null, comparison = null }) {
   if (!timeline || timeline.length === 0) {
     return (
       <div className="freedom-chart">
@@ -30,6 +30,22 @@ function FreedomChart({ timeline, title = "Freedom Chart", summary = null }) {
     paidOffThisMonth: month.paid_off_this_month || [], // Add payoff info
     monthNumber: month.month,
   }));
+
+  // Prepare baseline data if available and merge with main data
+  if (baselineTimeline && baselineTimeline.length > 0) {
+    const baselineMap = new Map();
+    baselineTimeline.forEach(month => {
+      baselineMap.set(month.month, parseFloat(month.total_balance));
+    });
+    
+    // Merge baseline data into chart data
+    chartData.forEach(dataPoint => {
+      const baselineValue = baselineMap.get(dataPoint.monthNumber);
+      if (baselineValue !== undefined) {
+        dataPoint['Baseline Debt'] = baselineValue;
+      }
+    });
+  }
 
   // Identify debt payoff milestones
   const payoffMilestones = [];
@@ -157,6 +173,18 @@ function FreedomChart({ timeline, title = "Freedom Chart", summary = null }) {
             strokeWidth={3}
             activeDot={{ r: 8 }} 
           />
+          {/* Baseline line (ghostly overlay) */}
+          {baselineTimeline && baselineTimeline.length > 0 && (
+            <Line 
+              type="monotone" 
+              dataKey="Baseline Debt" 
+              stroke="#666666" 
+              strokeWidth={2}
+              strokeDasharray="5 5"
+              strokeOpacity={0.6}
+              activeDot={{ r: 6, fill: '#666666' }} 
+            />
+          )}
           {/* Add reference lines for debt payoff milestones */}
           {payoffMilestones.map((milestone, index) => {
             console.log(`Adding reference line for ${milestone.debtName} at Month ${milestone.monthNumber}`);
@@ -179,6 +207,46 @@ function FreedomChart({ timeline, title = "Freedom Chart", summary = null }) {
           })}
         </LineChart>
       </ResponsiveContainer>
+      
+      {/* Baseline Comparison Summary */}
+      {comparison && (
+        <div className="baseline-comparison mt-md">
+          <div className="card">
+            <div className="card-body">
+              <h4 className="text-warning mb-sm">
+                <i className="fas fa-ghost me-2"></i>
+                Baseline Comparison (No Payment Reallocation)
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-sm">
+                <div className="text-center">
+                  <h5 className="text-danger font-bold">
+                    {comparison.months_saved} months
+                  </h5>
+                  <p className="text-secondary text-sm">Time Saved</p>
+                </div>
+                <div className="text-center">
+                  <h5 className="text-danger font-bold">
+                    R {comparison.interest_saved.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </h5>
+                  <p className="text-secondary text-sm">Interest Saved</p>
+                </div>
+                <div className="text-center">
+                  <h5 className="text-danger font-bold">
+                    R {comparison.payments_saved.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </h5>
+                  <p className="text-secondary text-sm">Total Payments Saved</p>
+                </div>
+              </div>
+              <div className="mt-sm text-center">
+                <p className="text-secondary text-sm">
+                  <i className="fas fa-info-circle me-1"></i>
+                  The dashed gray line shows what would happen if you only paid minimum payments without reallocating freed payments.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Payoff Milestones Summary */}
       {payoffMilestones.length > 0 && (

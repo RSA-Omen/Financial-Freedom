@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import SummaryCards from './SummaryCards';
 import FreedomChart from './FreedomChart';
 import * as XLSX from 'xlsx';
@@ -7,6 +7,38 @@ import 'jspdf-autotable';
 
 function Dashboard({ debts, simulationResults }) {
   console.log('🏠 Dashboard render - debts:', debts?.length, 'simulationResults:', simulationResults);
+  
+  const [baselineData, setBaselineData] = useState(null);
+  const [showBaseline, setShowBaseline] = useState(false);
+  
+  // Fetch baseline data when simulation results change
+  useEffect(() => {
+    if (simulationResults?.simulation_results) {
+      fetchBaselineData();
+    }
+  }, [simulationResults]);
+  
+  const fetchBaselineData = async () => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/calculate/compare-with-baseline`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          strategy: 'avalanche',
+          extra_payment: 0
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setBaselineData(data);
+      }
+    } catch (error) {
+      console.error('Error fetching baseline data:', error);
+    }
+  };
   
   // Export functions
   const exportToExcel = () => {
@@ -136,6 +168,15 @@ function Dashboard({ debts, simulationResults }) {
           <h2 className="card-title">Freedom Chart</h2>
           <div className="btn-group">
             <button 
+              onClick={() => setShowBaseline(!showBaseline)}
+              className={`btn btn-sm ${showBaseline ? 'btn-warning' : 'btn-outline-warning'}`}
+              disabled={!baselineData}
+              title="Show baseline comparison (no payment reallocation)"
+            >
+              <i className="fas fa-ghost me-1"></i>
+              {showBaseline ? 'Hide' : 'Show'} Baseline
+            </button>
+            <button 
               onClick={() => {
                 console.log('🔄 Manual refresh triggered');
                 window.location.reload();
@@ -169,6 +210,9 @@ function Dashboard({ debts, simulationResults }) {
               timeline={simulationResults.simulation_results} 
               title="Your Path to Financial Freedom"
               summary={simulationResults.summary}
+              baselineTimeline={showBaseline ? baselineData?.baseline?.simulation_results : null}
+              baselineSummary={showBaseline ? baselineData?.baseline?.summary : null}
+              comparison={showBaseline ? baselineData?.comparison : null}
             />
           ) : (
             <FreedomChart timeline={null} title="Freedom Chart" />

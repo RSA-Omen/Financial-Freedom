@@ -472,6 +472,103 @@ def calculate_hybrid():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/calculate/baseline', methods=['POST'])
+def run_baseline_simulation():
+    """Run baseline simulation without payment reallocation."""
+    try:
+        data = request.get_json()
+        extra_payment = Decimal(str(data.get('extra_payment', 0)))
+        
+        # Get debts from database
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'error': 'Database connection failed'}), 500
+        
+        cursor = connection.cursor()
+        cursor.execute("""
+            SELECT id, name, principal, apr, min_payment, payment_frequency, 
+                   compounding, status
+            FROM debts 
+            WHERE status = 'active'
+        """)
+        
+        rows = cursor.fetchall()
+        debts = [debt_from_row(row) for row in rows]
+        cursor.close()
+        connection.close()
+        
+        if not debts:
+            return jsonify({'error': 'No active debts found'}), 400
+        
+        # Load debts into simulation engine
+        simulation_engine.debts = debts
+        
+        # Run baseline simulation
+        result = simulation_engine.simulate_baseline(extra_payment)
+        
+        return jsonify(result)
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/calculate/compare-with-baseline', methods=['POST'])
+def compare_with_baseline():
+    """Compare avalanche strategy with baseline (no reallocation)."""
+    try:
+        data = request.get_json()
+        strategy = data.get('strategy', 'avalanche')
+        extra_payment = Decimal(str(data.get('extra_payment', 0)))
+        
+        # Get debts from database
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'error': 'Database connection failed'}), 500
+        
+        cursor = connection.cursor()
+        cursor.execute("""
+            SELECT id, name, principal, apr, min_payment, payment_frequency, 
+                   compounding, status
+            FROM debts 
+            WHERE status = 'active'
+        """)
+        
+        rows = cursor.fetchall()
+        debts = [debt_from_row(row) for row in rows]
+        cursor.close()
+        connection.close()
+        
+        if not debts:
+            return jsonify({'error': 'No active debts found'}), 400
+        
+        # Load debts into simulation engine
+        simulation_engine.debts = debts
+        
+        # Run strategy simulation
+        if strategy == 'avalanche':
+            strategy_result = simulation_engine.simulate_avalanche(extra_payment)
+        elif strategy == 'snowball':
+            strategy_result = simulation_engine.simulate_snowball(extra_payment)
+        else:
+            strategy_result = simulation_engine.simulate_avalanche(extra_payment)
+        
+        # Run baseline simulation
+        baseline_result = simulation_engine.simulate_baseline(extra_payment)
+        
+        return jsonify({
+            'strategy': strategy_result,
+            'baseline': baseline_result,
+            'comparison': {
+                'months_saved': baseline_result['summary']['months_to_zero'] - strategy_result['summary']['months_to_zero'],
+                'interest_saved': baseline_result['summary']['total_interest_paid'] - strategy_result['summary']['total_interest_paid'],
+                'payments_saved': baseline_result['summary']['total_payments_made'] - strategy_result['summary']['total_payments_made']
+            }
+        })
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/calculate/compare', methods=['POST'])
 def compare_strategies():
     """Compare all three strategies."""
@@ -500,7 +597,10 @@ def compare_strategies():
         if not debts:
             return jsonify({'error': 'No active debts found'}), 400
         
-        result = simulation_engine.compare_strategies(debts, extra_payment)
+        # Load debts into simulation engine
+        simulation_engine.debts = debts
+        
+        result = simulation_engine.compare_strategies(extra_payment)
         return jsonify(result)
     
     except Exception as e:
