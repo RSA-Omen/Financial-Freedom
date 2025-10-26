@@ -19,7 +19,7 @@ CREATE TABLE debts (
     user_id INT,
     name VARCHAR(255) NOT NULL,
     principal DECIMAL(12,2) NOT NULL CHECK (principal >= 0),
-    apr DECIMAL(5,2) NOT NULL CHECK (apr >= 0 AND apr <= 100),
+    apr DECIMAL(6,4) NOT NULL CHECK (apr >= 0),
     min_payment DECIMAL(10,2) NOT NULL CHECK (min_payment >= 0),
     payment_frequency ENUM('monthly', 'weekly') DEFAULT 'monthly',
     compounding ENUM('monthly', 'daily', 'none') DEFAULT 'monthly',

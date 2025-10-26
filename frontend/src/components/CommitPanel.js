@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { calculateImpact, getRecommendation } from '../utils/api';
 import { formatZAR, formatMonthsToYears } from '../utils/api';
+import FreedomChart from './FreedomChart';
 
 const CommitPanel = ({ debts }) => {
   const [extraPayment, setExtraPayment] = useState(0);
@@ -50,6 +51,11 @@ const CommitPanel = ({ debts }) => {
 
   const handleStrategyChange = (newStrategy) => {
     setStrategy(newStrategy);
+  };
+
+  const handleCommit = () => {
+    // TODO: Implement commit functionality
+    alert(`Committed to pay ${formatZAR(extraPayment)} extra per month using ${strategy} strategy!`);
   };
 
   if (!debts || debts.length === 0) {
@@ -138,6 +144,17 @@ const CommitPanel = ({ debts }) => {
             <div className="form-help text-gray-400 mt-1">
               Enter any additional amount you can pay each month
             </div>
+          </div>
+          
+          <div className="form-actions mt-4">
+            <button 
+              className="btn btn-primary"
+              onClick={handleCommit}
+              disabled={extraPayment <= 0}
+            >
+              <i className="fas fa-handshake me-2"></i>
+              Commit to Extra Payment
+            </button>
           </div>
         </div>
       </div>
@@ -249,64 +266,83 @@ const CommitPanel = ({ debts }) => {
         </div>
       )}
 
-      {/* Comparison Charts */}
+      {/* Freedom Chart */}
       {impact && !loading && (
         <div className="card mb-4">
           <div className="card-header">
             <h4 className="card-title">
               <i className="fas fa-chart-line me-2"></i>
+              Freedom Chart with Extra Payment
+            </h4>
+          </div>
+          <div className="card-body">
+            <FreedomChart 
+              timeline={impact.enhanced_simulation.timeline} 
+              title="Your Path to Financial Freedom"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Comparison Table */}
+      {impact && !loading && (
+        <div className="card mb-4">
+          <div className="card-header">
+            <h4 className="card-title">
+              <i className="fas fa-table me-2"></i>
               Before vs After Comparison
             </h4>
           </div>
           <div className="card-body">
-            <div className="comparison-charts">
-              <div className="chart-container">
-                <h5 className="text-mint mb-3">Base Scenario (No Extra Payment)</h5>
-                <div className="scenario-summary">
-                  <div className="summary-item">
-                    <span className="label text-gray-300">Time to Freedom:</span>
-                    <span className="value text-gray-300">
+            <div className="table-responsive">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Metric</th>
+                    <th className="text-center">Without Extra Payment</th>
+                    <th className="text-center">With Extra Payment</th>
+                    <th className="text-center">Improvement</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td className="font-bold">Months to Zero</td>
+                    <td className="text-center text-secondary">
                       {formatMonthsToYears(impact.base_simulation.summary.months_to_zero)}
-                    </span>
-                  </div>
-                  <div className="summary-item">
-                    <span className="label text-gray-300">Total Interest:</span>
-                    <span className="value text-warning">
-                      {formatZAR(impact.base_simulation.summary.total_interest_paid)}
-                    </span>
-                  </div>
-                  <div className="summary-item">
-                    <span className="label text-gray-300">Debt-Free Date:</span>
-                    <span className="value text-gray-300">
-                      {new Date(impact.base_simulation.summary.debt_free_date).toLocaleDateString('en-ZA')}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="chart-container">
-                <h5 className="text-success mb-3">Enhanced Scenario (With Extra Payment)</h5>
-                <div className="scenario-summary">
-                  <div className="summary-item">
-                    <span className="label text-gray-300">Time to Freedom:</span>
-                    <span className="value text-success">
+                    </td>
+                    <td className="text-center text-success">
                       {formatMonthsToYears(impact.enhanced_simulation.summary.months_to_zero)}
-                    </span>
-                  </div>
-                  <div className="summary-item">
-                    <span className="label text-gray-300">Total Interest:</span>
-                    <span className="value text-success">
+                    </td>
+                    <td className="text-center text-success">
+                      -{impact.impact.months_saved} months
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="font-bold">Total Interest Paid</td>
+                    <td className="text-center text-secondary">
+                      {formatZAR(impact.base_simulation.summary.total_interest_paid)}
+                    </td>
+                    <td className="text-center text-success">
                       {formatZAR(impact.enhanced_simulation.summary.total_interest_paid)}
-                    </span>
-                  </div>
-                  <div className="summary-item">
-                    <span className="label text-gray-300">Debt-Free Date:</span>
-                    <span className="value text-success">
+                    </td>
+                    <td className="text-center text-success">
+                      -{formatZAR(impact.impact.interest_saved)}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="font-bold">Debt-Free Date</td>
+                    <td className="text-center text-secondary">
+                      {new Date(impact.base_simulation.summary.debt_free_date).toLocaleDateString('en-ZA')}
+                    </td>
+                    <td className="text-center text-success">
                       {new Date(impact.enhanced_simulation.summary.debt_free_date).toLocaleDateString('en-ZA')}
-                    </span>
-                  </div>
-                </div>
-              </div>
+                    </td>
+                    <td className="text-center text-success">
+                      {impact.impact.months_saved} months earlier
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>

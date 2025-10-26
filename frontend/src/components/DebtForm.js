@@ -16,10 +16,19 @@ const DebtForm = ({ onDebtAdded }) => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    
+    // For APR field, store the raw percentage value and convert only on submit
+    if (name === 'apr') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value // Store raw percentage value
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
     
     // Clear error when user starts typing
     if (errors[name]) {
@@ -41,8 +50,8 @@ const DebtForm = ({ onDebtAdded }) => {
       newErrors.principal = 'Principal amount must be greater than 0';
     }
     
-    if (!formData.apr || parseFloat(formData.apr) < 0 || parseFloat(formData.apr) > 100) {
-      newErrors.apr = 'APR must be between 0 and 100';
+    if (!formData.apr || parseFloat(formData.apr) < 0 || parseFloat(formData.apr) > 1000) {
+      newErrors.apr = 'APR must be between 0 and 1000%';
     }
     
     if (!formData.min_payment || parseFloat(formData.min_payment) <= 0) {
@@ -65,7 +74,7 @@ const DebtForm = ({ onDebtAdded }) => {
       const debtData = {
         ...formData,
         principal: parseFloat(formData.principal),
-        apr: parseFloat(formData.apr),
+        apr: parseFloat(formData.apr) / 100, // Convert percentage to decimal
         min_payment: parseFloat(formData.min_payment)
       };
       
@@ -188,10 +197,10 @@ const DebtForm = ({ onDebtAdded }) => {
                     value={formData.apr}
                     onChange={handleInputChange}
                     className={`form-input ${errors.apr ? 'error' : ''}`}
-                    placeholder="0.00"
+                    placeholder="13.05"
                     step="0.01"
                     min="0"
-                    max="100"
+                    max="1000"
                     required
                   />
                   {errors.apr && (

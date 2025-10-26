@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import Dashboard from './components/Dashboard';
-import DebtForm from './components/DebtForm';
-import StrategyComparison from './components/StrategyComparison';
+import DebtTable from './components/DebtTable';
+import Strategies from './components/Strategies';
 import CommitPanel from './components/CommitPanel';
 import InsightsPanel from './components/InsightsPanel';
-import { getDebts, getDebtSummary } from './utils/api';
+import { getDebts, getDebtSummary, runSimulation } from './utils/api';
 import './App.css';
 
 function App() {
   const [debts, setDebts] = useState([]);
-  const [summary, setSummary] = useState(null);
+  const [simulationResults, setSimulationResults] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
 
@@ -20,12 +20,14 @@ function App() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [debtsData, summaryData] = await Promise.all([
-        getDebts(),
-        getDebtSummary()
-      ]);
+      const debtsData = await getDebts();
       setDebts(debtsData.debts || []);
-      setSummary(summaryData.summary || {});
+      
+      // Run simulation for dashboard
+      if (debtsData.debts && debtsData.debts.length > 0) {
+        const simulation = await runSimulation('avalanche', 0);
+        setSimulationResults(simulation);
+      }
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -114,21 +116,20 @@ function App() {
           {activeTab === 'dashboard' && (
             <Dashboard 
               debts={debts} 
-              summary={summary}
-              onDebtUpdated={handleDebtUpdated}
-              onDebtDeleted={handleDebtDeleted}
+              simulationResults={simulationResults}
             />
           )}
           
           {activeTab === 'debts' && (
-            <DebtForm 
-              onDebtAdded={handleDebtAdded}
-              onDebtUpdated={handleDebtUpdated}
+            <DebtTable 
+              debts={debts}
+              onEditDebt={handleDebtUpdated}
+              onDeleteDebt={handleDebtDeleted}
             />
           )}
           
           {activeTab === 'strategies' && (
-            <StrategyComparison debts={debts} />
+            <Strategies debts={debts} />
           )}
           
           {activeTab === 'commit' && (

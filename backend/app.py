@@ -24,11 +24,11 @@ CORS(app)  # Enable CORS for React frontend
 
 # Database configuration
 DB_CONFIG = {
-    'host': os.getenv('DB_HOST', 'localhost'),
-    'port': int(os.getenv('DB_PORT', 6001)),
-    'user': os.getenv('DB_USER', 'financial_user'),
-    'password': os.getenv('DB_PASSWORD', 'financial_pass'),
-    'database': os.getenv('DB_NAME', 'financial_freedom')
+    'host': os.getenv('MYSQL_HOST', 'localhost'),
+    'port': int(os.getenv('MYSQL_PORT', 3306)),
+    'user': os.getenv('MYSQL_USER', 'financial_user'),
+    'password': os.getenv('MYSQL_PASSWORD', 'financial_pass'),
+    'database': os.getenv('MYSQL_DB', 'financial_freedom')
 }
 
 # Initialize services
@@ -50,15 +50,20 @@ def get_db_connection():
 
 def debt_from_row(row):
     """Convert database row to Debt object."""
+    # Convert APR from percentage to decimal if it's > 1
+    apr_value = Decimal(str(row[3]))
+    if apr_value > 1:
+        apr_value = apr_value / Decimal('100')
+    
     return Debt(
         debt_id=row[0],
         name=row[1],
         principal=Decimal(str(row[2])),
-        apr=Decimal(str(row[3])),
+        apr=apr_value,
         min_payment=Decimal(str(row[4])),
         payment_frequency=row[5],
         compounding=row[6],
-        status=row[8]
+        status=row[7]
     )
 
 
