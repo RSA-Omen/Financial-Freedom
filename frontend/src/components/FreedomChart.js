@@ -26,6 +26,8 @@ function FreedomChart({ timeline, title = "Freedom Chart", summary = null }) {
     'Interest Accrued': parseFloat(month.interest_this_month),
     'Principal Paid': parseFloat(month.payments_this_month),
     debtDetails: month.debts, // Keep for custom tooltip
+    paidOffThisMonth: month.paid_off_this_month || [], // Add payoff info
+    monthNumber: month.month,
   }));
 
   // Identify debt payoff milestones
@@ -33,18 +35,39 @@ function FreedomChart({ timeline, title = "Freedom Chart", summary = null }) {
   const paidOffDebts = new Set();
 
   timeline.forEach((month, index) => {
-    month.debts.forEach(debt => {
-      if (debt.status === 'paid' && !paidOffDebts.has(debt.id)) {
-        payoffMilestones.push({
-          date: month.date,
-          value: chartData[index]['Total Debt'],
-          debtName: debt.name,
-          monthIndex: index,
-        });
-        paidOffDebts.add(debt.id);
-      }
-    });
+    // Check if any debts were paid off this month
+    if (month.paid_off_this_month && month.paid_off_this_month.length > 0) {
+      month.paid_off_this_month.forEach(debtName => {
+        if (!paidOffDebts.has(debtName)) {
+          payoffMilestones.push({
+            date: month.date,
+            value: chartData[index]['Total Debt'],
+            debtName: debtName,
+            monthIndex: index,
+            monthNumber: month.month,
+          });
+          paidOffDebts.add(debtName);
+        }
+      });
+    }
   });
+
+  console.log('🎯 Payoff Milestones Found:', payoffMilestones);
+
+  // Create custom x-axis tick formatter to highlight payoff dates
+  const formatXAxisTick = (value) => {
+    const date = new Date(value);
+    const milestone = payoffMilestones.find(m => m.date === value);
+    
+    if (milestone) {
+      return {
+        value: date.toLocaleDateString('en-ZA', { month: 'short', year: '2-digit' }),
+        style: { fontWeight: 'bold', fill: 'var(--nodus-success)' }
+      };
+    }
+    
+    return date.toLocaleDateString('en-ZA', { month: 'short', year: '2-digit' });
+  };
 
   // Custom Tooltip for more details
   const CustomTooltip = ({ active, payload, label }) => {
@@ -109,7 +132,8 @@ function FreedomChart({ timeline, title = "Freedom Chart", summary = null }) {
           <XAxis 
             dataKey="date" 
             stroke="var(--nodus-text-secondary)"
-            tickFormatter={(value) => new Date(value).toLocaleDateString('en-ZA', { month: 'short', year: '2-digit' })}
+            tickFormatter={formatXAxisTick}
+            tick={{ fontSize: 12 }}
           />
           <YAxis 
             stroke="var(--nodus-text-secondary)" 
@@ -126,17 +150,63 @@ function FreedomChart({ timeline, title = "Freedom Chart", summary = null }) {
             activeDot={{ r: 8 }} 
           />
           {/* Add reference lines for debt payoff milestones */}
-          {payoffMilestones.map((milestone, index) => (
-            <ReferenceLine
-              key={`milestone-${index}`}
-              x={milestone.date}
-              stroke="var(--nodus-success)"
-              strokeDasharray="5 5"
-              label={{ value: `${milestone.debtName} Paid Off`, position: 'top', fill: 'var(--nodus-text-primary)' }}
-            />
-          ))}
+          {payoffMilestones.map((milestone, index) => {
+            console.log(`Adding reference line for ${milestone.debtName} at ${milestone.date}`);
+            return (
+              <ReferenceLine
+                key={`milestone-${index}`}
+                x={milestone.date}
+                stroke="#00d4aa"
+                strokeWidth={4}
+                strokeDasharray="10 5"
+                label={{ 
+                  value: `🎉 ${milestone.debtName}`, 
+                  position: 'top', 
+                  fill: '#00d4aa',
+                  fontSize: 14,
+                  fontWeight: 'bold'
+                }}
+              />
+            );
+          })}
         </LineChart>
       </ResponsiveContainer>
+      
+      {/* Payoff Milestones Summary */}
+      {payoffMilestones.length > 0 && (
+        <div className="payoff-milestones mt-md">
+          <h4 className="text-success mb-sm">
+            <i className="fas fa-trophy me-2"></i>
+            Debt Payoff Milestones
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-sm">
+            {payoffMilestones.map((milestone, index) => (
+              <div key={`summary-${index}`} className="card card-sm">
+                <div className="card-body">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h5 className="text-success mb-1">{milestone.debtName}</h5>
+                      <p className="text-secondary text-sm">
+                        Month {milestone.monthNumber}
+                      </p>
+                      <p className="text-primary font-bold">
+                        {new Date(milestone.date).toLocaleDateString('en-ZA', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </p>
+                    </div>
+                    <div className="text-success text-2xl">
+                      <i className="fas fa-check-circle"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
