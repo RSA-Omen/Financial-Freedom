@@ -6,6 +6,29 @@
   color: var(--text-primary);
 }
 
+/* Drag and Drop Styles */
+.draggable-card {
+  transition: all 0.2s ease;
+}
+
+.draggable-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.draggable-card.dragging {
+  opacity: 0.5;
+  transform: rotate(5deg);
+}
+
+.drag-handle {
+  cursor: grab;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
 .loading-container {
   display: flex;
   justify-content: center;

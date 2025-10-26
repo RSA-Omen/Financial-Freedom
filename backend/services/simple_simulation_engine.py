@@ -565,3 +565,149 @@ class SimpleSimulationEngine:
                 'strategy': 'baseline'
             }
         }
+
+    def simulate_custom_order(self, custom_order: List[str], extra_payment: Decimal = Decimal('0'), max_months: int = 600) -> Dict[str, Any]:
+        """Simulate debt repayment with custom milestone order."""
+        if not self.debts:
+            return {'error': 'No debts loaded'}
+        
+        # Create working copies
+        working_debts = [copy.deepcopy(debt) for debt in self.debts]
+        
+        simulation_results = []
+        total_interest_paid = Decimal('0')
+        total_payments_made = Decimal('0')
+        
+        # Create a priority map based on custom order
+        priority_map = {}
+        for i, debt_name in enumerate(custom_order):
+            priority_map[debt_name] = i
+        
+        for month in range(1, max_months + 1):
+            # Check if all debts are paid off
+            active_debts = [debt for debt in working_debts if debt.status == 'active']
+            if not active_debts:
+                break
+            
+            # Calculate current date
+            current_date = datetime.now() + timedelta(days=30 * (month - 1))
+            
+            month_data = {
+                'month': month,
+                'date': current_date.strftime('%Y-%m-%d'),
+                'debts': [],
+                'total_balance': Decimal('0'),
+                'interest_this_month': Decimal('0'),
+                'payments_this_month': Decimal('0'),
+                'paid_off_this_month': []
+            }
+            
+            # Step 0: Apply monthly interest to all active debts (once per month)
+            debt_interest_map = {}
+            for debt in active_debts:
+                if debt.status != 'active':
+                    continue
+                monthly_interest = debt.apply_monthly_interest()
+                debt_interest_map[debt.id] = monthly_interest
+                month_data['interest_this_month'] += monthly_interest
+                total_interest_paid += monthly_interest
+            
+            # Step 1: Calculate total available payment for this month
+            # Use ALL debts (including paid-off ones) to maintain constant total payment
+            total_min_payments = sum(debt.min_payment for debt in working_debts)
+            total_available_payment = total_min_payments + extra_payment
+            
+            # Step 2: Apply payments according to custom order priority
+            remaining_payment = total_available_payment
+            
+            # Sort debts by custom priority (lower number = higher priority)
+            sorted_debts = sorted(active_debts, key=lambda x: priority_map.get(x.name, 999))
+            
+            for debt in sorted_debts:
+                if debt.status != 'active' or remaining_payment <= 0:
+                    break
+                
+                # Calculate payment for this debt
+                if remaining_payment >= debt.min_payment:
+                    # Can pay minimum payment
+                    payment_amount = debt.min_payment
+                    remaining_payment -= payment_amount
+                else:
+                    # Can only pay partial minimum
+                    payment_amount = remaining_payment
+                    remaining_payment = Decimal('0')
+                
+                # Apply payment
+                payment_result = debt.apply_payment(payment_amount)
+                
+                # Track payments
+                month_data['payments_this_month'] += payment_amount
+                total_payments_made += payment_amount
+                
+                # Add debt info
+                debt_info = {
+                    'id': debt.id,
+                    'name': debt.name,
+                    'balance': debt.principal,
+                    'interest_paid': debt_interest_map.get(debt.id, Decimal('0')),
+                    'payment_made': payment_amount,
+                    'status': debt.status
+                }
+                month_data['debts'].append(debt_info)
+                
+                # Check if paid off
+                if debt.status == 'paid':
+                    month_data['paid_off_this_month'].append(debt.name)
+            
+            # Step 3: Apply any remaining payment to the highest priority active debt
+            if remaining_payment > 0 and active_debts:
+                # Find the highest priority active debt
+                highest_priority_debt = min(active_debts, key=lambda x: priority_map.get(x.name, 999))
+                
+                # Apply remaining payment
+                extra_result = highest_priority_debt.apply_payment(remaining_payment)
+                
+                # Update the debt info in month_data
+                for debt_info in month_data['debts']:
+                    if debt_info['id'] == highest_priority_debt.id:
+                        debt_info['balance'] = highest_priority_debt.principal
+                        debt_info['payment_made'] += remaining_payment
+                        debt_info['status'] = highest_priority_debt.status
+                        break
+                
+                # Track extra payment
+                month_data['payments_this_month'] += remaining_payment
+                total_payments_made += remaining_payment
+                
+                # Check if target debt was paid off
+                if highest_priority_debt.status == 'paid':
+                    month_data['paid_off_this_month'].append(highest_priority_debt.name)
+            
+            # Calculate total balance
+            month_data['total_balance'] = sum(debt.principal for debt in working_debts if debt.status == 'active')
+            
+            simulation_results.append(month_data)
+        
+        # Calculate summary
+        final_debts = []
+        for debt in working_debts:
+            final_debts.append({
+                'id': debt.id,
+                'name': debt.name,
+                'final_balance': float(debt.principal),
+                'status': debt.status,
+                'months_paid': debt.months_paid,
+                'total_interest_paid': float(debt.total_interest_paid)
+            })
+        
+        return {
+            'simulation_results': simulation_results,
+            'summary': {
+                'months_to_zero': month - 1 if not active_debts else max_months,
+                'total_interest_paid': float(total_interest_paid),
+                'total_payments_made': float(total_payments_made),
+                'final_debts': final_debts,
+                'strategy': 'custom_order',
+                'custom_order': custom_order
+            }
+        }

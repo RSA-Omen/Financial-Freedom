@@ -5,7 +5,7 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
-function Dashboard({ debts, simulationResults }) {
+function Dashboard({ debts, simulationResults, onSimulationUpdate }) {
   console.log('🏠 Dashboard render - debts:', debts?.length, 'simulationResults:', simulationResults);
   
   const [baselineData, setBaselineData] = useState(null);
@@ -426,6 +426,7 @@ function Dashboard({ debts, simulationResults }) {
               baselineTimeline={showBaseline ? baselineData?.baseline?.simulation_results : null}
               baselineSummary={showBaseline ? baselineData?.baseline?.summary : null}
               comparison={showBaseline ? baselineData?.comparison : null}
+              onSimulationUpdate={onSimulationUpdate}
             />
           ) : (
             <FreedomChart timeline={null} title="Freedom Chart" />

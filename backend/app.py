@@ -12,6 +12,7 @@ from mysql.connector import Error
 import json
 from datetime import datetime
 import os
+import copy
 
 # Import services
 from services.simple_simulation_engine import SimpleSimulationEngine, SimpleDebt
@@ -564,6 +565,293 @@ def compare_with_baseline():
                 'payments_saved': baseline_result['summary']['total_payments_made'] - strategy_result['summary']['total_payments_made']
             }
         })
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/calculate/scenarios', methods=['POST'])
+def run_scenario_analysis():
+    """Run what-if scenario analysis."""
+    try:
+        data = request.get_json()
+        scenarios = data.get('scenarios', {})
+        base_simulation = data.get('baseSimulation')
+        
+        if not base_simulation:
+            return jsonify({'error': 'Base simulation data required'}), 400
+        
+        # Get debts from database
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'error': 'Database connection failed'}), 500
+        
+        cursor = connection.cursor()
+        cursor.execute("""
+            SELECT id, name, principal, apr, min_payment, payment_frequency, 
+                   compounding, status
+            FROM debts 
+            WHERE status = 'active'
+        """)
+        
+        rows = cursor.fetchall()
+        debts = [debt_from_row(row) for row in rows]
+        cursor.close()
+        connection.close()
+        
+        if not debts:
+            return jsonify({'error': 'No active debts found'}), 400
+        
+        # Load debts into simulation engine
+        simulation_engine.debts = debts
+        
+        results = {}
+        
+        # Job Loss Scenario
+        if scenarios.get('jobLoss', {}).get('enabled'):
+            job_loss_scenario = simulate_job_loss_scenario(
+                debts, 
+                scenarios['jobLoss']['months'],
+                scenarios['jobLoss']['reducedIncome']
+            )
+            results['jobLoss'] = job_loss_scenario
+        
+        # Windfall Scenario
+        if scenarios.get('windfall', {}).get('enabled'):
+            windfall_scenario = simulate_windfall_scenario(
+                debts,
+                scenarios['windfall']['amount'],
+                scenarios['windfall']['month']
+            )
+            results['windfall'] = windfall_scenario
+        
+        # Rate Change Scenario
+        if scenarios.get('rateChange', {}).get('enabled'):
+            rate_change_scenario = simulate_rate_change_scenario(
+                debts,
+                scenarios['rateChange']['newRate'],
+                scenarios['rateChange']['affectedDebts']
+            )
+            results['rateChange'] = rate_change_scenario
+        
+        return jsonify({
+            'baseSimulation': base_simulation,
+            'scenarios': results,
+            'comparison': calculate_scenario_comparison(base_simulation, results)
+        })
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/calculate/consolidation', methods=['POST'])
+def run_consolidation_analysis():
+    """Run debt consolidation analysis."""
+    try:
+        data = request.get_json()
+        debts_data = data.get('debts', [])
+        consolidation_rate = Decimal(str(data.get('consolidationRate', 0.09)))
+        consolidation_term = int(data.get('consolidationTerm', 60))
+        
+        if not debts_data:
+            return jsonify({'error': 'Debts data required'}), 400
+        
+        # Calculate current total debt and weighted average rate
+        total_debt = sum(float(debt['principal']) for debt in debts_data)
+        total_monthly_payments = sum(float(debt['min_payment']) for debt in debts_data)
+        
+        # Calculate weighted average APR
+        weighted_interest = sum(
+            float(debt['principal']) * float(debt['apr']) 
+            for debt in debts_data
+        )
+        current_avg_rate = weighted_interest / total_debt if total_debt > 0 else 0
+        
+        # Calculate consolidation loan details
+        monthly_rate = consolidation_rate / Decimal('12')
+        consolidation_payment = calculate_monthly_payment(
+            Decimal(str(total_debt)), 
+            consolidation_rate, 
+            consolidation_term
+        )
+        
+        # Calculate savings
+        monthly_savings = Decimal(str(total_monthly_payments)) - consolidation_payment
+        total_savings = monthly_savings * Decimal(str(consolidation_term))
+        
+        return jsonify({
+            'current': {
+                'totalDebt': float(total_debt),
+                'monthlyPayments': float(total_monthly_payments),
+                'averageRate': float(current_avg_rate),
+                'totalPayments': float(total_monthly_payments * 128)  # Assuming 128 months from current simulation
+            },
+            'consolidation': {
+                'totalDebt': float(total_debt),
+                'monthlyPayment': float(consolidation_payment),
+                'interestRate': float(consolidation_rate),
+                'termMonths': consolidation_term,
+                'totalPayments': float(consolidation_payment * consolidation_term)
+            },
+            'savings': {
+                'monthlySavings': float(monthly_savings),
+                'totalSavings': float(total_savings),
+                'rateReduction': float(current_avg_rate - consolidation_rate),
+                'recommended': consolidation_rate < current_avg_rate
+            }
+        })
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+def calculate_monthly_payment(principal, annual_rate, months):
+    """Calculate monthly payment for a loan."""
+    if annual_rate == 0:
+        return principal / Decimal(str(months))
+    
+    monthly_rate = annual_rate / Decimal('12')
+    months_decimal = Decimal(str(months))
+    payment = principal * (monthly_rate * (1 + monthly_rate) ** months_decimal) / ((1 + monthly_rate) ** months_decimal - 1)
+    return payment
+
+
+def simulate_job_loss_scenario(debts, months_unemployed, income_reduction):
+    """Simulate impact of job loss."""
+    # Create modified debts with reduced payments
+    modified_debts = []
+    for debt in debts:
+        modified_debt = copy.deepcopy(debt)
+        # Reduce payment by income reduction percentage
+        modified_debt.min_payment = debt.min_payment * Decimal(str(income_reduction))
+        modified_debts.append(modified_debt)
+    
+    # Run simulation with modified payments
+    simulation_engine.debts = modified_debts
+    result = simulation_engine.simulate_avalanche()
+    
+    return {
+        'monthsUnemployed': months_unemployed,
+        'incomeReduction': income_reduction,
+        'simulation': result,
+        'impact': {
+            'monthsAdded': result['summary']['months_to_zero'] - 128,  # Compare to base
+            'interestAdded': result['summary']['total_interest_paid'] - 1308728,  # Compare to base
+            'paymentReduction': float(sum(debt.min_payment for debt in debts) * (1 - income_reduction))
+        }
+    }
+
+
+def simulate_windfall_scenario(debts, windfall_amount, application_month):
+    """Simulate impact of windfall payment."""
+    # Run simulation with windfall applied at specific month
+    simulation_engine.debts = debts
+    result = simulation_engine.simulate_avalanche(Decimal(str(windfall_amount)))
+    
+    return {
+        'windfallAmount': windfall_amount,
+        'applicationMonth': application_month,
+        'simulation': result,
+        'impact': {
+            'monthsSaved': 128 - result['summary']['months_to_zero'],  # Compare to base
+            'interestSaved': 1308728 - result['summary']['total_interest_paid'],  # Compare to base
+            'roi': (1308728 - result['summary']['total_interest_paid']) / windfall_amount if windfall_amount > 0 else 0
+        }
+    }
+
+
+def simulate_rate_change_scenario(debts, new_rate, affected_debt_ids):
+    """Simulate impact of interest rate changes."""
+    # Create modified debts with new rates
+    modified_debts = []
+    for debt in debts:
+        modified_debt = copy.deepcopy(debt)
+        if str(debt.id) in affected_debt_ids:
+            modified_debt.apr = Decimal(str(new_rate))
+        modified_debts.append(modified_debt)
+    
+    # Run simulation with modified rates
+    simulation_engine.debts = modified_debts
+    result = simulation_engine.simulate_avalanche()
+    
+    return {
+        'newRate': new_rate,
+        'affectedDebts': affected_debt_ids,
+        'simulation': result,
+        'impact': {
+            'monthsChanged': result['summary']['months_to_zero'] - 128,  # Compare to base
+            'interestChanged': result['summary']['total_interest_paid'] - 1308728,  # Compare to base
+        }
+    }
+
+
+def calculate_scenario_comparison(base_simulation, scenario_results):
+    """Calculate comparison metrics between scenarios."""
+    comparison = {}
+    
+    for scenario_name, scenario_data in scenario_results.items():
+        if scenario_name == 'jobLoss':
+            comparison[scenario_name] = {
+                'monthsImpact': scenario_data['impact']['monthsAdded'],
+                'interestImpact': scenario_data['impact']['interestAdded'],
+                'severity': 'High' if scenario_data['impact']['monthsAdded'] > 12 else 'Medium'
+            }
+        elif scenario_name == 'windfall':
+            comparison[scenario_name] = {
+                'monthsSaved': scenario_data['impact']['monthsSaved'],
+                'interestSaved': scenario_data['impact']['interestSaved'],
+                'roi': scenario_data['impact']['roi'],
+                'effectiveness': 'High' if scenario_data['impact']['roi'] > 2 else 'Medium'
+            }
+        elif scenario_name == 'rateChange':
+            comparison[scenario_name] = {
+                'monthsImpact': scenario_data['impact']['monthsChanged'],
+                'interestImpact': scenario_data['impact']['interestChanged'],
+                'impact': 'Positive' if scenario_data['impact']['interestChanged'] < 0 else 'Negative'
+            }
+    
+    return comparison
+
+
+@app.route('/api/calculate/custom-order', methods=['POST'])
+def run_custom_order_simulation():
+    """Run simulation with custom milestone order."""
+    try:
+        data = request.get_json()
+        custom_order = data.get('custom_order', [])
+        extra_payment = Decimal(str(data.get('extra_payment', 0)))
+        
+        if not custom_order:
+            return jsonify({'error': 'Custom order required'}), 400
+        
+        # Get debts from database
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'error': 'Database connection failed'}), 500
+        
+        cursor = connection.cursor()
+        cursor.execute("""
+            SELECT id, name, principal, apr, min_payment, payment_frequency, 
+                   compounding, status
+            FROM debts 
+            WHERE status = 'active'
+        """)
+        
+        rows = cursor.fetchall()
+        debts = [debt_from_row(row) for row in rows]
+        cursor.close()
+        connection.close()
+        
+        if not debts:
+            return jsonify({'error': 'No active debts found'}), 400
+        
+        # Load debts into simulation engine
+        simulation_engine.debts = debts
+        
+        # Run custom order simulation
+        result = simulation_engine.simulate_custom_order(custom_order, extra_payment)
+        
+        return jsonify(result)
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500

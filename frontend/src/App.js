@@ -4,6 +4,7 @@ import DebtTable from './components/DebtTable';
 import Strategies from './components/Strategies';
 import CommitPanel from './components/CommitPanel';
 import InsightsPanel from './components/InsightsPanel';
+import Analytics from './components/Analytics';
 import { getDebts, getDebtSummary, runSimulation } from './utils/api';
 import './App.css';
 
@@ -51,6 +52,10 @@ function App() {
 
   const handleDebtDeleted = () => {
     loadData();
+  };
+
+  const handleSimulationUpdate = (newSimulationResults) => {
+    setSimulationResults(newSimulationResults);
   };
 
   if (loading) {
@@ -112,6 +117,13 @@ function App() {
               <i className="fas fa-lightbulb me-1"></i>
               Insights
             </button>
+            <button 
+              className={`nav-link ${activeTab === 'analytics' ? 'active' : ''}`}
+              onClick={() => setActiveTab('analytics')}
+            >
+              <i className="fas fa-chart-pie me-1"></i>
+              Analytics
+            </button>
           </div>
         </div>
       </nav>
@@ -123,6 +135,7 @@ function App() {
             <Dashboard 
               debts={debts} 
               simulationResults={simulationResults}
+              onSimulationUpdate={handleSimulationUpdate}
             />
           )}
           
@@ -144,6 +157,10 @@ function App() {
           
           {activeTab === 'insights' && (
             <InsightsPanel debts={debts} />
+          )}
+          
+          {activeTab === 'analytics' && (
+            <Analytics debts={debts} simulationResults={simulationResults} />
           )}
         </div>
       </main>

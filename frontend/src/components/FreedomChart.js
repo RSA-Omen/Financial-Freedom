@@ -1,7 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
 
-function FreedomChart({ timeline, title = "Freedom Chart", summary = null, baselineTimeline = null, baselineSummary = null, comparison = null }) {
+function FreedomChart({ timeline, title = "Freedom Chart", summary = null, baselineTimeline = null, baselineSummary = null, comparison = null, onSimulationUpdate = null }) {
+  const [customMilestoneOrder, setCustomMilestoneOrder] = useState([]);
+  const [draggedIndex, setDraggedIndex] = useState(null);
+  const [isUpdatingSimulation, setIsUpdatingSimulation] = useState(false);
+  
   if (!timeline || timeline.length === 0) {
     return (
       <div className="freedom-chart">
@@ -68,6 +72,78 @@ function FreedomChart({ timeline, title = "Freedom Chart", summary = null, basel
       });
     }
   });
+
+  // Initialize custom milestone order when timeline changes
+  useEffect(() => {
+    if (payoffMilestones.length > 0) {
+      setCustomMilestoneOrder([...payoffMilestones]);
+    }
+  }, [timeline]);
+
+  // Use custom order if available, otherwise use original order
+  const displayMilestones = customMilestoneOrder.length > 0 ? customMilestoneOrder : payoffMilestones;
+
+  // Drag and drop handlers
+  const handleDragStart = (e, index) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', e.target.outerHTML);
+    e.target.style.opacity = '0.5';
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDragEnd = (e) => {
+    e.target.style.opacity = '1';
+    setDraggedIndex(null);
+  };
+
+  const handleDrop = (e, dropIndex) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === dropIndex) return;
+
+    const newOrder = [...customMilestoneOrder];
+    const draggedItem = newOrder[draggedIndex];
+    newOrder.splice(draggedIndex, 1);
+    newOrder.splice(dropIndex, 0, draggedItem);
+    
+    setCustomMilestoneOrder(newOrder);
+    setDraggedIndex(null);
+    
+    // Trigger custom simulation with new order
+    triggerCustomSimulation(newOrder);
+  };
+
+  // Function to trigger custom simulation
+  const triggerCustomSimulation = async (newOrder) => {
+    if (!onSimulationUpdate) return;
+    
+    setIsUpdatingSimulation(true);
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/calculate/custom-order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          custom_order: newOrder.map(milestone => milestone.debtName),
+          extra_payment: 0
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        onSimulationUpdate(data);
+      }
+    } catch (error) {
+      console.error('Error running custom simulation:', error);
+    } finally {
+      setIsUpdatingSimulation(false);
+    }
+  };
 
   console.log('🎯 Payoff Milestones Found:', payoffMilestones);
 
@@ -186,7 +262,7 @@ function FreedomChart({ timeline, title = "Freedom Chart", summary = null, basel
             />
           )}
           {/* Add reference lines for debt payoff milestones */}
-          {payoffMilestones.map((milestone, index) => {
+          {displayMilestones.map((milestone, index) => {
             console.log(`Adding reference line for ${milestone.debtName} at Month ${milestone.monthNumber}`);
             return (
               <ReferenceLine
@@ -249,19 +325,40 @@ function FreedomChart({ timeline, title = "Freedom Chart", summary = null, basel
       )}
       
       {/* Payoff Milestones Summary */}
-      {payoffMilestones.length > 0 && (
+      {displayMilestones.length > 0 && (
         <div className="payoff-milestones mt-md">
           <h4 className="text-success mb-sm">
             <i className="fas fa-trophy me-2"></i>
             Debt Payoff Milestones
+            <span className="text-xs text-secondary ml-2">
+              <i className="fas fa-grip-vertical me-1"></i>
+              Drag to reorder
+            </span>
+            {isUpdatingSimulation && (
+              <span className="text-warning ml-2">
+                <i className="fas fa-spinner fa-spin me-1"></i>
+                Updating simulation...
+              </span>
+            )}
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-sm">
-            {payoffMilestones.map((milestone, index) => (
-              <div key={`summary-${index}`} className="card card-sm">
+            {displayMilestones.map((milestone, index) => (
+              <div 
+                key={`summary-${index}`} 
+                className={`card card-sm draggable-card ${draggedIndex === index ? 'dragging' : ''}`}
+                draggable
+                onDragStart={(e) => handleDragStart(e, index)}
+                onDragOver={handleDragOver}
+                onDragEnd={handleDragEnd}
+                onDrop={(e) => handleDrop(e, index)}
+              >
                 <div className="card-body">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <h5 className="text-success mb-1">{milestone.debtName}</h5>
+                    <div className="flex-1">
+                      <div className="flex items-center mb-1">
+                        <i className="fas fa-grip-vertical text-gray-400 me-2 drag-handle"></i>
+                        <h5 className="text-success mb-0">{milestone.debtName}</h5>
+                      </div>
                       <p className="text-secondary text-sm">
                         Month {milestone.monthNumber}
                       </p>
